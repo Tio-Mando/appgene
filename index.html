@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>appgene - Gestión Clínica Oftalmológica</title>
+    <meta name="description" content="Sistema inteligente de gestión de historias clínicas y agenda para oftalmólogos.">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Iconos Lucide para un aspecto premium e integrado sin dependencias pesadas -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER EXCLUSIVO MÓVIL (Solo visible en pantallas pequeñas) -->
+        <header class="mobile-top-bar">
+            <div class="logo-section" style="display: flex; align-items: center; gap: 10px;">
+                <div class="logo-icon">AG</div>
+                <span class="logo-text">appgene</span>
+            </div>
+            <button class="btn-theme-mobile" onclick="toggleTheme()">
+                <i id="theme-icon-mobile" data-lucide="moon"></i>
+            </button>
+        </header>
+
+        <!-- BARRA LATERAL (SIDEBAR DE ESCRITORIO - Se oculta en mobile) -->
+        <aside class="sidebar">
+            <div class="sidebar-header-wrapper">
+                <div class="logo-section">
+                    <div class="logo-icon">AG</div>
+                    <span class="logo-text">appgene</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-nav-wrapper" style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; width: 100%;">
+                <nav class="sidebar-nav" style="margin-top: 2rem; width: 100%;">
+                    <ul class="nav-links">
+                        <li class="nav-item active" id="nav-dashboard">
+                            <a href="#" onclick="switchPage('dashboard')">
+                                <i data-lucide="layout-dashboard"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item" id="nav-patients">
+                            <a href="#" onclick="switchPage('patients')">
+                                <i data-lucide="users"></i>
+                                <span>Pacientes</span>
+                            </a>
+                        </li>
+                        <li class="nav-item" id="nav-agenda">
+                            <a href="#" onclick="switchPage('agenda')">
+                                <i data-lucide="calendar"></i>
+                                <span>Agenda</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            
+            <div class="theme-toggle-container">
+                <button class="btn-theme" onclick="toggleTheme()">
+                    <i id="theme-icon" data-lucide="moon"></i>
+                    <span id="theme-text">Modo Oscuro</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- AREA DE CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="search-bar">
+                    <i class="search-icon" data-lucide="search"></i>
+                    <input type="text" id="global-search" placeholder="Buscar paciente por nombre o ID..." oninput="handleGlobalSearch()">
+                </div>
+                <div class="doctor-profile">
+                    <div class="doctor-avatar">Dr</div>
+                    <div class="doctor-info">
+                        <div class="doctor-name">Dra. Especialista</div>
+                        <div class="doctor-specialty">Oftalmología General</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- PAGINA 1: DASHBOARD -->
+            <section id="page-dashboard" class="page active">
+                <div class="section-header">
+                    <h2>Panel de Control</h2>
+                    <button class="btn-primary" onclick="openNewPatientModal()">
+                        <i data-lucide="user-plus"></i> Nuevo Paciente
+                    </button>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-title">Pacientes Registrados</div>
+                        <div class="card-value" id="stat-patients-count">0</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Citas para Hoy</div>
+                        <div class="card-value" id="stat-today-appointments">0</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Próximas Cirugías</div>
+                        <div class="card-value" id="stat-upcoming-surgeries">0</div>
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin-top: 2rem;">
+                    <h3>Actividad de Citas del Día</h3>
+                </div>
+                <div class="card" style="padding: 0; overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;" id="table-today-events">
+                        <thead>
+                            <tr style="background-color: var(--bg-app); border-bottom: 1px solid var(--border-color);">
+                                <th style="padding: 16px;">Hora</th>
+                                <th style="padding: 16px;">Paciente</th>
+                                <th style="padding: 16px;">Tipo</th>
+                                <th style="padding: 16px;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="today-events-list">
+                            <!-- Inyectado dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- PAGINA 2: PACIENTES -->
+            <section id="page-patients" class="page">
+                <div class="section-header">
+                    <h2>Listado de Pacientes</h2>
+                    <button class="btn-primary" onclick="openNewPatientModal()">
+                        <i data-lucide="user-plus"></i> Nuevo Paciente
+                    </button>
+                </div>
+
+                <div class="card" style="padding: 0; overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="background-color: var(--bg-app); border-bottom: 1px solid var(--border-color);">
+                                <th style="padding: 16px;">ID / Cédula</th>
+                                <th style="padding: 16px;">Nombre Completo</th>
+                                <th style="padding: 16px;">Teléfono</th>
+                                <th style="padding: 16px;">Historial Médico</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patients-list-table">
+                            <!-- Inyectado dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- PAGINA 3: AGENDA -->
+            <section id="page-agenda" class="page">
+                <div class="section-header">
+                    <h2>Agenda de Consultas y Cirugías</h2>
+                    <button class="btn-primary" onclick="openNewAppointmentModal()">
+                        <i data-lucide="calendar-plus"></i> Programar Cita/Cirugía
+                    </button>
+                </div>
+                <div class="calendar-container" style="padding: 1rem;">
+                    <!-- Cabecera del calendario fija y visible 100% sin scroll -->
+                    <div class="calendar-header" style="margin-bottom: 1.5rem;">
+                        <button class="btn-primary" style="padding: 8px 16px;" onclick="prevMonth()"><i data-lucide="chevron-left"></i></button>
+                        <h3 id="calendar-month-year" style="font-family: 'Outfit', sans-serif;">Junio 2026</h3>
+                        <button class="btn-primary" style="padding: 8px 16px;" onclick="nextMonth()"><i data-lucide="chevron-right"></i></button>
+                    </div>
+                    
+                    <!-- Solo la cuadrícula de días tiene scroll horizontal si excede la pantalla -->
+                    <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                        <div class="calendar-grid" id="calendar-days-grid" style="min-width: 600px;">
+                            <!-- Generado dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL 1: REGISTRAR/EDITAR PACIENTE -->
+    <div class="modal-overlay" id="modal-patient">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('modal-patient')">×</button>
+            <h3 style="margin-bottom: 1.5rem; font-family: 'Outfit', sans-serif;">Registrar Nuevo Paciente</h3>
+            <form id="form-new-patient" onsubmit="savePatient(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="p-id">Identificación / Cédula</label>
+                        <input type="text" id="p-id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="p-name">Nombre Completo</label>
+                        <input type="text" id="p-name" required>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="p-phone">Teléfono (WhatsApp)</label>
+                        <input type="tel" id="p-phone" placeholder="Ej: 584120000000" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="p-birth">Fecha de Nacimiento</label>
+                        <input type="date" id="p-birth" required>
+                    </div>
+                </div>
+                <div style="text-align: right; margin-top: 1.5rem;">
+                    <button type="submit" class="btn-primary">Guardar Paciente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: NUEVA CITA / CIRUGÍA (CON EVITACIÓN DE SOLAPAMIENTOS) -->
+    <div class="modal-overlay" id="modal-appointment">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('modal-appointment')">×</button>
+            <h3 style="margin-bottom: 1.5rem; font-family: 'Outfit', sans-serif;">Programar Cita u Operación</h3>
+            <form id="form-new-appointment" onsubmit="saveAppointment(event)">
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label for="app-patient-select">Paciente</label>
+                    <select id="app-patient-select" required>
+                        <!-- Cargados dinámicamente -->
+                    </select>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="app-date">Fecha</label>
+                        <input type="date" id="app-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="app-type">Tipo de Evento</label>
+                        <select id="app-type" required>
+                            <option value="consulta">Consulta de Primera Vez</option>
+                            <option value="control">Control de Rutina</option>
+                            <option value="cirugia">Cirugía / Operación (Bloqueante)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="app-start-time">Hora de Inicio</label>
+                        <input type="time" id="app-start-time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="app-end-time">Hora de Fin</label>
+                        <input type="time" id="app-end-time" required>
+                    </div>
+                </div>
+                <div id="scheduler-alert" style="display: none; padding: 12px; border-radius: var(--radius-sm); background-color: var(--color-danger-light); color: var(--color-danger); font-size: 0.9rem; font-weight: 500; margin-bottom: 1.2rem;">
+                    ⚠️ Error: El horario seleccionado se solapa con una Cirugía u otra cita programada.
+                </div>
+                <div style="text-align: right; margin-top: 1.5rem;">
+                    <button type="submit" class="btn-primary">Reservar Horario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: FICHA MÉDICA E HISTORIAL (LECTURA DE HISTORIAL COMPLETO) -->
+    <div class="modal-overlay" id="modal-clinical-history">
+        <div class="modal-content" style="max-width: 800px; width: 95%;">
+            <button class="modal-close" onclick="closeModal('modal-clinical-history')">×</button>
+            <h3 style="margin-bottom: 1rem; font-family: 'Outfit', sans-serif;" id="ch-patient-title">Historia Clínica - Armando</h3>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                <button class="btn-primary" style="padding: 8px 16px; background: var(--color-accent);" onclick="openNewConsultationFromCurrent()">
+                    <i data-lucide="plus"></i> Nueva Consulta
+                </button>
+            </div>
+
+            <!-- Listado del historial colapsado -->
+            <div style="margin-top: 1rem;">
+                <h4 style="margin-bottom: 1.2rem; color: var(--color-accent); display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="history"></i> Fichas Técnicas Anteriores
+                </h4>
+                <div id="clinical-records-timeline" style="display: flex; flex-direction: column; gap: 0.8rem;">
+                    <!-- Cargados dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Botón de eliminar en el pie del modal, separado de las consultas -->
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+                <button class="btn-primary" style="background: var(--color-danger); padding: 8px 16px; font-size: 0.9rem;" onclick="triggerDeleteCurrentPatient()">
+                    <i data-lucide="trash-2"></i> Eliminar Paciente de la Base de Datos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: REGISTRAR NUEVA CONSULTA (MODAL SEPARADO) -->
+    <div class="modal-overlay" id="modal-new-consultation">
+        <div class="modal-content" style="max-width: 800px; width: 95%;">
+            <button class="modal-close" onclick="closeModal('modal-new-consultation')">×</button>
+            <h3 style="margin-bottom: 1.5rem; font-family: 'Outfit', sans-serif;" id="new-consultation-title">Registrar Consulta de Hoy</h3>
+            
+            <form id="form-new-consultation" onsubmit="saveConsultation(event)">
+                <h4 style="margin-bottom: 10px;">Mediciones Oculares</h4>
+                
+                <div class="eye-panel">
+                    <div class="eye-title"><i data-lucide="eye"></i> Ojo Derecho (OD)</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Esfera</label>
+                            <input type="text" id="od-esfera" placeholder="Ej: -1.25">
+                        </div>
+                        <div class="form-group">
+                            <label>Cilindro</label>
+                            <input type="text" id="od-cilindro" placeholder="Ej: +0.50">
+                        </div>
+                        <div class="form-group">
+                            <label>Eje</label>
+                            <input type="text" id="od-eje" placeholder="Ej: 180°">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Agudeza Visual (AV)</label>
+                            <input type="text" id="od-av" placeholder="Ej: 20/20">
+                        </div>
+                        <div class="form-group">
+                            <label>Presión Intraocular (PIO)</label>
+                            <input type="text" id="od-pio" placeholder="Ej: 14 mmHg">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="eye-panel">
+                    <div class="eye-title"><i data-lucide="eye"></i> Ojo Izquierdo (OS)</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Esfera</label>
+                            <input type="text" id="os-esfera" placeholder="Ej: -1.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Cilindro</label>
+                            <input type="text" id="os-cilindro" placeholder="Ej: +0.25">
+                        </div>
+                        <div class="form-group">
+                            <label>Eje</label>
+                            <input type="text" id="os-eje" placeholder="Ej: 165°">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Agudeza Visual (AV)</label>
+                            <input type="text" id="os-av" placeholder="Ej: 20/25">
+                        </div>
+                        <div class="form-group">
+                            <label>Presión Intraocular (PIO)</label>
+                            <input type="text" id="os-pio" placeholder="Ej: 15 mmHg">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.2rem;">
+                    <label for="c-notes">Observación de Fondo de Ojo y Párpados</label>
+                    <textarea id="c-notes" rows="3" placeholder="Detalles clínicos relevantes..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-top: 1.2rem;">
+                    <label for="c-prescription">Indicaciones / Tratamiento Recomendado</label>
+                    <textarea id="c-prescription" rows="3" placeholder="Ej: Gotas lubricantes cada 8 horas por 15 días..." required></textarea>
+                </div>
+
+                <div class="form-grid" style="margin-top: 1.2rem;">
+                    <div class="form-group">
+                        <label for="c-next-appointment">Fecha de Próxima Cita (Opcional)</label>
+                        <input type="date" id="c-next-appointment">
+                    </div>
+                </div>
+
+                <!-- Botón directo de WhatsApp -->
+                <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                    <button type="button" class="btn-primary" style="background: var(--color-success); padding: 10px 20px; font-size: 0.95rem; width: 100%; justify-content: center;" onclick="generateAndSendWhatsApp()">
+                        <i data-lucide="send"></i> Enviar Recipe por WhatsApp
+                    </button>
+                </div>
+
+                <div style="text-align: right; margin-top: 1.5rem;">
+                    <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">Guardar Consulta e Historial</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- BARRA DE NAVEGACIÓN INFERIOR PARA MÓVILES -->
+    <nav class="mobile-nav">
+        <a href="#" class="mobile-nav-item active" id="mobile-nav-dashboard" onclick="switchPage('dashboard')">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="#" class="mobile-nav-item" id="mobile-nav-patients" onclick="switchPage('patients')">
+            <i data-lucide="users"></i>
+            <span>Pacientes</span>
+        </a>
+        <a href="#" class="mobile-nav-item" id="mobile-nav-agenda" onclick="switchPage('agenda')">
+            <i data-lucide="calendar"></i>
+            <span>Agenda</span>
+        </a>
+    </nav>
+
+    <!-- Scripts de la app -->
+    <script src="app.js"></script>
+</body>
+</html>
