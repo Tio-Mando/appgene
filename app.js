@@ -1240,7 +1240,7 @@ function renderDashboard() {
         
         let actionButton = 'N/A';
         if (isCancelled) {
-            actionButton = `<span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Cancelada</span>`;
+            actionButton = `<button class="btn-primary" disabled style="padding: 6px 12px; font-size: 0.85rem; background: #e2e8f0 !important; background-image: none !important; color: #94a3b8 !important; border: 1px solid #cbd5e1 !important; cursor: not-allowed !important; pointer-events: none !important; box-shadow: none !important; transform: none !important;">Iniciar Consulta</button>`;
         } else if (baseType !== 'cirugia') {
             if (isCompleted) {
                 actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem; background: #64748b; box-shadow: 0 4px 10px rgba(100, 116, 139, 0.2);" onclick="openClinicalHistory('${app.patient_id}')">Chequear Consulta</button>`;
@@ -1249,14 +1249,15 @@ function renderDashboard() {
             }
         }
 
-        // Parpadeo de color azul claro si faltan menos de 20 minutos (o ya comenzó/pasó) y no está realizada/cancelada
+        // Parpadeo de color azul claro en la antesala de la cita (desde 20 minutos antes hasta el momento de inicio)
         let rowClass = "";
-        if (!isCompleted && !isCancelled) {
+        if (!isCompleted && !isCancelled && baseType !== 'cirugia') {
             const now = new Date();
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
             const startMinutes = timeToMinutes(app.start_time);
             const diff = startMinutes - nowMinutes;
-            if (diff <= 20) {
+            // Solo parpadear si faltan 20 minutos o menos, pero todavía no ha llegado la hora de inicio (diff > 0)
+            if (diff <= 20 && diff > 0) {
                 rowClass = "class='blink-blue'";
             }
         }
@@ -1312,10 +1313,19 @@ function showContextMenu(e, appId, appType, patientId) {
 
     let menuHTML = '';
     // Si no es cirugía (o sea, es cita/control), mostramos la opción de Ver
-    if (appType !== 'cirugia') {
+    if (appType !== 'cirugia' && appType !== 'cancelada') {
         menuHTML += `
             <div class="context-menu-item" onclick="openClinicalHistory('${patientId}')">
                 <i data-lucide="eye" style="width:16px; height:16px;"></i> Ver Historial
+            </div>
+        `;
+    }
+    
+    // Opción de Cancelar Cita (solo si no es cirugía y no está ya cancelada)
+    if (appType !== 'cirugia' && appType !== 'cancelada') {
+        menuHTML += `
+            <div class="context-menu-item" onclick="cancelAppointmentById('${appId}')" style="color: var(--color-warning);">
+                <i data-lucide="x-circle" style="width:16px; height:16px; color: var(--color-warning);"></i> Cancelar Cita
             </div>
         `;
     }
@@ -1337,25 +1347,56 @@ function showContextMenu(e, appId, appType, patientId) {
     lucide.createIcons();
 }
 
+async function cancelAppointmentById(appId) {
+    const confirmCancel = await confirm("¿Estás seguro de que deseas marcar esta cita como cancelada?");
+    if (!confirmCancel) return;
+
+    // Actualizar localmente de inmediato para asegurar respuesta instantánea
+    const appIndex = state.appointments.findIndex(a => a.id === appId);
+    if (appIndex !== -1) {
+        state.appointments[appIndex].type = 'cancelada';
+    }
+    renderDashboard();
+    renderCalendar();
+
+    try {
+        const { error } = await supabaseClient
+            .from('appointments')
+            .update({ type: 'cancelada' })
+            .eq('id', appId);
+        
+        if (error) {
+            console.error("Error al actualizar tipo en Supabase, intentando eliminar en su lugar...");
+            // Si la base de datos rechaza la palabra 'cancelada', la eliminamos directamente como respaldo seguro
+            await supabaseClient.from('appointments').delete().eq('id', appId);
+            state.appointments = state.appointments.filter(a => a.id !== appId);
+            renderDashboard();
+            renderCalendar();
+        }
+    } catch (err) {
+        console.error("Error de conexión al cancelar cita:", err);
+    }
+}
+
 async function deleteAppointment(appId) {
     const confirmDelete = await confirm("¿Estás seguro de que deseas eliminar este evento/cirugía de la agenda?");
     if (!confirmDelete) return;
 
+    // Actualizar estado local inmediatamente
+    state.appointments = state.appointments.filter(app => app.id !== appId);
+    renderDashboard();
+    renderCalendar();
+
     try {
         const { error } = await supabaseClient.from('appointments').delete().eq('id', appId);
         if (error) throw error;
-
-        // Quitar del estado local
-        state.appointments = state.appointments.filter(app => app.id !== appId);
-        
-        renderDashboard();
-        renderCalendar();
     } catch (err) {
         console.error("Error al eliminar cita/cirugía:", err);
         alert("Ocurrió un error al intentar eliminar el evento en el servidor.");
     }
 }
 
+// Búsqueda global
 // Búsqueda global
 function handleGlobalSearch() {
     const query = document.getElementById('global-search').value.toLowerCase().trim();
@@ -1391,6 +1432,7 @@ function enterDashboardDeleteMode() {
     renderDashboard();
 }
 
+// Búsqueda global
 function exitDashboardDeleteMode() {
     state.dashboardDeleteMode = false;
     document.getElementById('btn-dashboard-trash').style.display = 'inline-flex';
@@ -1486,6 +1528,46 @@ window.promptReasons = function(title, message, options) {
     });
 };
 
+function playNotificationSound() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        
+        // Tono 1 (Re5 / D5 - 587.33 Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start();
+        osc1.stop(ctx.currentTime + 0.3);
+
+        // Tono 2 (La5 / A5 - 880.00 Hz) con retraso
+        setTimeout(() => {
+            try {
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(880.00, ctx.currentTime);
+                gain2.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start();
+                osc2.stop(ctx.currentTime + 0.4);
+            } catch (e) {
+                console.error(e);
+            }
+        }, 150);
+    } catch (err) {
+        console.warn("AudioContext block/error:", err);
+    }
+}
+
 function checkUpcomingAppointments() {
     const todayStr = new Date().toISOString().split('T')[0];
     const now = new Date();
@@ -1502,6 +1584,7 @@ function checkUpcomingAppointments() {
             // Disparar exactamente en el minuto que debe iniciar la cita
             if (nowMins === startMins && !state.promptedAppointments.includes(app.id)) {
                 state.promptedAppointments.push(app.id);
+                playNotificationSound();
                 promptStartAppointment(app);
                 break;
             }
@@ -1520,39 +1603,44 @@ async function promptStartAppointment(app) {
     
     if (start) {
         openNewConsultationDirectly(app.patient_id, app.id);
-    } else {
-        const reason = await promptReasons(
-            "Cita Pospuesta / Cancelada",
-            "Selecciona la razón por la que no se inicia la cita a la hora:",
-            [
-                { text: "El paciente está retrasado", value: "delayed" },
-                { text: "La doctora está ocupada / retrasada", value: "doctor_busy" },
-                { text: "El cliente canceló la cita", value: "cancelled" },
-                { text: "Otro motivo", value: "other" }
-            ]
-        );
+    }
+}
+
+async function cancelAppointmentFromConsultationForm() {
+    if (!state.currentAppointmentId) {
+        alert("No hay una cita activa asociada a esta consulta para cancelar.");
+        return;
+    }
+    
+    const confirmCancel = await confirm("¿Estás seguro de que deseas cancelar esta cita del día de hoy?");
+    if (!confirmCancel) return;
+
+    const appId = state.currentAppointmentId;
+
+    // Actualizar localmente inmediatamente
+    const appIndex = state.appointments.findIndex(a => a.id === appId);
+    if (appIndex !== -1) {
+        state.appointments[appIndex].type = 'cancelada';
+    }
+    
+    closeModal('modal-new-consultation');
+    renderDashboard();
+    renderCalendar();
+
+    try {
+        const { error } = await supabaseClient
+            .from('appointments')
+            .update({ type: 'cancelada' })
+            .eq('id', appId);
         
-        if (reason === 'cancelled') {
-            try {
-                const { error } = await supabaseClient
-                    .from('appointments')
-                    .update({ type: 'cancelada' })
-                    .eq('id', app.id);
-                
-                if (error) throw error;
-                
-                const appIndex = state.appointments.findIndex(a => a.id === app.id);
-                if (appIndex !== -1) {
-                    state.appointments[appIndex].type = 'cancelada';
-                }
-                
-                renderDashboard();
-                renderCalendar();
-                alert("La cita ha sido marcada como cancelada y se mostrará con opacidad del 50%.", "Cita Cancelada");
-            } catch (err) {
-                console.error("Error al cancelar la cita:", err);
-                alert("Error al intentar cancelar la cita en el servidor.");
-            }
+        if (error) {
+            console.error("Error al actualizar tipo en Supabase, intentando eliminar en su lugar...");
+            await supabaseClient.from('appointments').delete().eq('id', appId);
+            state.appointments = state.appointments.filter(a => a.id !== appId);
+            renderDashboard();
+            renderCalendar();
         }
+    } catch (err) {
+        console.error("Error al actualizar en Supabase:", err);
     }
 }

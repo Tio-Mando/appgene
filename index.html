@@ -400,7 +400,10 @@
                 </div>
 
                 <!-- Botones de Acción de Consulta -->
-                <div class="consultation-actions">
+                <div class="consultation-actions" style="display: flex; gap: 12px; margin-top: 1.5rem; width: 100%;">
+                    <button type="button" class="btn-primary" style="background: var(--color-danger); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);" onclick="cancelAppointmentFromConsultationForm()">
+                        <i data-lucide="x-circle"></i> Cancelar Cita
+                    </button>
                     <button type="button" class="btn-primary btn-whatsapp" onclick="generateAndSendWhatsApp()">
                         <i data-lucide="send"></i> Enviar Recipe por WhatsApp
                     </button>
