@@ -1138,7 +1138,9 @@ function renderCalendar() {
                 dayEvents.map(app => {
                     const patient = state.patients.find(p => p.id === app.patient_id);
                     const name = patient ? patient.name.split(' ')[0] : 'Pac.';
-                    return `<span class="badge-event badge-${app.type}" title="${app.start_time} - ${app.type.toUpperCase()}: ${name}" oncontextmenu="event.stopPropagation(); showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">${app.start_time} ${name}</span>`;
+                    const typeClass = app.type ? app.type.trim().toLowerCase() : '';
+                    const typeUpper = app.type ? app.type.toUpperCase() : '';
+                    return `<span class="badge-event badge-${typeClass}" title="${app.start_time} - ${typeUpper}: ${name}" oncontextmenu="event.stopPropagation(); showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">${app.start_time} ${name}</span>`;
                 }).join('') + `</div>`;
         }
 
@@ -1224,9 +1226,9 @@ function renderDashboard() {
         const patientName = patient ? patient.name : 'Desconocido';
         
         // Formatear el badge del tipo de cita y si fue realizada/cancelada
-        const isCancelled = app.type === 'cancelada';
-        const isCompleted = app.type.endsWith('_completed');
-        const baseType = app.type.replace('_completed', '');
+        const isCancelled = app.type && app.type.trim().toLowerCase() === 'cancelada';
+        const isCompleted = app.type && app.type.endsWith('_completed');
+        const baseType = app.type ? app.type.replace('_completed', '') : '';
         
         let typeLabel = baseType === 'cirugia' ? 'Cirugía' : baseType === 'consulta' ? 'Consulta' : 'Control';
         let typeBadge = '';
