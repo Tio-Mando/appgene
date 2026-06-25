@@ -1,19 +1,127 @@
 // ==========================================================
-// STATE MANAGEMENT & LOCAL STORAGE
+// SUPABASE CLIENT INITIALIZATION & CREDENTIALS
 // ==========================================================
+const supabaseUrl = 'https://eczrrtlvbmhtfsctsdfq.supabase.co';
+const supabaseKey = 'sb_publishable_o-uBe3CYjkCegiR-S0UKog_ZCfA_YNY';
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+// State wrapper locally cached to render components instantly
 let state = {
-    patients: JSON.parse(localStorage.getItem('appgene_patients')) || [],
-    appointments: JSON.parse(localStorage.getItem('appgene_appointments')) || [],
+    patients: [],
+    appointments: [],
     currentPatientId: null,
     currentDate: new Date(),
     theme: localStorage.getItem('appgene_theme') || 'light'
 };
 
-function saveState() {
-    localStorage.setItem('appgene_patients', JSON.stringify(state.patients));
-    localStorage.setItem('appgene_appointments', JSON.stringify(state.appointments));
-    localStorage.setItem('appgene_theme', state.theme);
+// ==========================================================
+// CUSTOM STYLISH ALERTS & CONFIRMATIONS (REPLACING BROWSER DEFAULT DEVIANT DIALOGS)
+// ==========================================================
+window.alert = function(message, title = "Aviso") {
+    const modal = document.getElementById('modal-confirm');
+    const titleEl = document.getElementById('confirm-title');
+    const messageEl = document.getElementById('confirm-message');
+    const btnCancel = document.getElementById('btn-confirm-cancel');
+    const btnAccept = document.getElementById('btn-confirm-accept');
+    const iconContainer = document.getElementById('confirm-icon-container');
+
+    if (!modal) return;
+
+    // Configurar iconos y textos
+    iconContainer.innerHTML = `<i data-lucide="info" style="width: 48px; height: 48px; stroke-width: 1.5;"></i>`;
+    iconContainer.style.color = "var(--color-primary)";
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    
+    // Ocultar botón de cancelar para un simple Alert
+    btnCancel.style.display = 'none';
+    btnAccept.textContent = "Aceptar";
+    btnAccept.style.background = "var(--color-primary)";
+    
+    modal.style.display = 'flex';
+    lucide.createIcons();
+
+    return new Promise((resolve) => {
+        btnAccept.onclick = () => {
+            modal.style.display = 'none';
+            resolve();
+        };
+    });
+};
+
+window.confirm = function(message, title = "Confirmar Acción") {
+    const modal = document.getElementById('modal-confirm');
+    const titleEl = document.getElementById('confirm-title');
+    const messageEl = document.getElementById('confirm-message');
+    const btnCancel = document.getElementById('btn-confirm-cancel');
+    const btnAccept = document.getElementById('btn-confirm-accept');
+    const iconContainer = document.getElementById('confirm-icon-container');
+
+    if (!modal) return;
+
+    // Configurar iconos y textos
+    iconContainer.innerHTML = `<i data-lucide="help-circle" style="width: 48px; height: 48px; stroke-width: 1.5;"></i>`;
+    iconContainer.style.color = "var(--color-warning)";
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    
+    // Mostrar botones
+    btnCancel.style.display = 'inline-block';
+    btnAccept.textContent = "Confirmar";
+    btnAccept.style.background = "var(--color-danger)";
+    
+    modal.style.display = 'flex';
+    lucide.createIcons();
+
+    return new Promise((resolve) => {
+        btnAccept.onclick = () => {
+            modal.style.display = 'none';
+            resolve(true);
+        };
+        btnCancel.onclick = () => {
+            modal.style.display = 'none';
+            resolve(false);
+        };
+    });
+};
+
+// Validar campos requeridos de forma personalizada mostrando alerta premium
+function validateForm(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return true;
+
+    const requiredFields = form.querySelectorAll('[required]');
+    for (let field of requiredFields) {
+        if (!field.value || field.value.trim() === '') {
+            let labelText = '';
+            
+            // Buscar etiqueta asociada por ID
+            const label = form.querySelector(`label[for="${field.id}"]`);
+            if (label) {
+                labelText = label.textContent.trim();
+            } else {
+                // Buscar etiqueta padre
+                const parentLabel = field.closest('label');
+                if (parentLabel) {
+                    labelText = parentLabel.textContent.trim();
+                } else {
+                    // Fallback a placeholder o nombre del elemento
+                    labelText = field.placeholder || field.getAttribute('placeholder') || field.name || 'este campo';
+                }
+            }
+
+            // Limpiar texto de la etiqueta (quitar asteriscos, opcionales, dos puntos al final)
+            labelText = labelText.replace('(Opcional)', '').replace(/:$/, '').trim();
+
+            // Mostrar el modal premium
+            alert(`Por favor, complete el campo requerido: "${labelText}"`, "Campo Requerido");
+            
+            // Focalizar en el input vacío
+            field.focus();
+            return false;
+        }
+    }
+    return true;
 }
 
 // ==========================================================
@@ -27,16 +135,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Lucide Icons init
     lucide.createIcons();
 
-    // Rellenar datos de prueba si el almacenamiento está vacío para que se vea completo
-    if (state.patients.length === 0) {
-        loadMockData();
-    }
+    // Renderizar vistas con estado vacío inicialmente para que los botones respondan
+    renderAllViews();
 
-    // Renderizar Vistas iniciales
-    renderDashboard();
-    renderPatients();
-    renderCalendar();
-    populatePatientSelect();
+    // Cargar pacientes y citas desde Supabase de forma asíncrona sin bloquear la UI
+    refreshStateFromSupabase().then(async () => {
+        // Rellenar datos de prueba si la base de datos remota está vacía
+        if (state.patients.length === 0) {
+            await loadMockData();
+        } else {
+            renderAllViews();
+        }
+    }).catch(err => {
+        console.error("Error inicial al obtener datos de Supabase:", err);
+    });
+
+    // Escuchar clics globales para cerrar el menú contextual personalizado
+    document.addEventListener('click', () => {
+        const menu = document.getElementById('custom-context-menu');
+        if (menu) menu.style.display = 'none';
+    });
 
     // Escuchar cambios en el formulario de nueva consulta para actualizar la vista previa de WhatsApp
     const formNewConsultation = document.getElementById('form-new-consultation');
@@ -45,16 +163,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function renderAllViews() {
+    renderDashboard();
+    renderPatients();
+    renderCalendar();
+    populatePatientSelect();
+}
+
+// Fetch all database records from Supabase cloud
+async function refreshStateFromSupabase() {
+    try {
+        const [patientsRes, appointmentsRes] = await Promise.all([
+            supabaseClient.from('patients').select('*'),
+            supabaseClient.from('appointments').select('*')
+        ]);
+
+        if (patientsRes.error) throw patientsRes.error;
+        if (appointmentsRes.error) throw appointmentsRes.error;
+
+        state.patients = patientsRes.data || [];
+        state.appointments = appointmentsRes.data || [];
+    } catch (err) {
+        console.error("Error al sincronizar con Supabase:", err);
+    }
+}
+
 // ==========================================================
 // MOCK DATA LOAD
 // ==========================================================
-function loadMockData() {
-    state.patients = [
+async function loadMockData() {
+    const mockPatients = [
         {
             id: "123456",
             name: "Armando Rondón",
             phone: "584121234567",
-            birthDate: "1995-05-12",
+            birth_date: "1995-05-12",
             history: [
                 {
                     date: "2026-05-10",
@@ -70,30 +213,41 @@ function loadMockData() {
             id: "789012",
             name: "María Pérez",
             phone: "584149876543",
-            birthDate: "1988-11-23",
+            birth_date: "1988-11-23",
             history: []
         }
     ];
 
-    state.appointments = [
+    const mockAppointments = [
         {
             id: "app-1",
-            patientId: "123456",
+            patient_id: "123456",
             date: new Date().toISOString().split('T')[0], // hoy
-            startTime: "09:00",
-            endTime: "10:00",
+            start_time: "09:00",
+            end_time: "10:00",
             type: "consulta"
         },
         {
             id: "app-2",
-            patientId: "789012",
+            patient_id: "789012",
             date: new Date().toISOString().split('T')[0], // hoy
-            startTime: "11:00",
-            endTime: "12:30",
+            start_time: "11:00",
+            end_time: "12:30",
             type: "cirugia"
         }
     ];
-    saveState();
+
+    try {
+        // Cargar pacientes de prueba
+        await supabaseClient.from('patients').insert(mockPatients);
+        // Cargar citas de prueba
+        await supabaseClient.from('appointments').insert(mockAppointments);
+        // Refrescar estado local
+        await refreshStateFromSupabase();
+        renderAllViews();
+    } catch (err) {
+        console.error("Error cargando mock data en Supabase:", err);
+    }
 }
 
 // ==========================================================
@@ -122,7 +276,7 @@ function switchPage(pageId) {
 function toggleTheme() {
     state.theme = state.theme === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', state.theme);
-    saveState();
+    localStorage.setItem('appgene_theme', state.theme);
     updateThemeUI();
 }
 
@@ -171,67 +325,103 @@ function populatePatientSelect() {
     select.innerHTML = state.patients.map(p => `<option value="${p.id}">${p.name} (${p.id})</option>`).join('');
 }
 
-function savePatient(e) {
+async function savePatient(e) {
     e.preventDefault();
+    if (!validateForm('form-new-patient')) return;
     const id = document.getElementById('p-id').value;
     const name = document.getElementById('p-name').value;
     const phone = document.getElementById('p-phone').value;
-    const birthDate = document.getElementById('p-birth').value;
+    const birth_date = document.getElementById('p-birth').value;
 
     if (state.patients.some(p => p.id === id)) {
         alert("Ya existe un paciente registrado con ese documento de identidad.");
         return;
     }
 
-    state.patients.push({ id, name, phone, birthDate, history: [] });
-    saveState();
-    closeModal('modal-patient');
-    renderPatients();
-    renderDashboard();
-    populatePatientSelect();
+    const newPatient = { id, name, phone, birth_date, history: [] };
+
+    try {
+        const { error } = await supabaseClient.from('patients').insert([newPatient]);
+        if (error) throw error;
+
+        // Actualizar localmente y renderizar
+        state.patients.push(newPatient);
+        closeModal('modal-patient');
+        renderPatients();
+        renderDashboard();
+        populatePatientSelect();
+    } catch (err) {
+        console.error("Error al registrar paciente:", err);
+        alert("Error al registrar paciente en el servidor: " + (err.message || JSON.stringify(err)));
+    }
 }
 
 function renderPatients() {
     const listTable = document.getElementById('patients-list-table');
     if (!listTable) return;
 
-    listTable.innerHTML = state.patients.map(p => `
-        <tr style="border-bottom: 1px solid var(--border-color); hover:background-color: var(--bg-surface-hover);">
-            <td style="padding: 16px; font-weight: 600;">${p.id}</td>
-            <td style="padding: 16px;">${p.name}</td>
-            <td style="padding: 16px;">${p.phone}</td>
-            <td style="padding: 16px;">
-                <button class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center;" onclick="openClinicalHistory('${p.id}')" title="Ver Historia Clínica">
-                    <i data-lucide="file-text"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    listTable.innerHTML = state.patients.map(p => {
+        const cleanPhone = p.phone.replace(/[^0-9]/g, '');
+        let whatsappPhone = cleanPhone;
+        if (cleanPhone.startsWith('0')) {
+            whatsappPhone = '58' + cleanPhone.substring(1);
+        }
+        const waLink = `https://wa.me/${whatsappPhone}`;
+
+        return `
+            <tr style="border-bottom: 1px solid var(--border-color); hover:background-color: var(--bg-surface-hover);">
+                <td style="padding: 16px; font-weight: 600;">${p.id}</td>
+                <td style="padding: 16px;">${p.name}</td>
+                <td style="padding: 16px;">
+                    <a href="${waLink}" target="_blank" style="color: var(--color-primary); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;" title="Abrir chat de WhatsApp">
+                        <i data-lucide="message-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
+                        ${p.phone}
+                    </a>
+                </td>
+                <td style="padding: 16px;">
+                    <button class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center;" onclick="openClinicalHistory('${p.id}')" title="Ver Historia Clínica">
+                        <i data-lucide="file-text"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
     lucide.createIcons();
 }
 
-function deletePatient(patientId) {
+async function deletePatient(patientId) {
     const patient = state.patients.find(p => p.id === patientId);
-    if (!patient) return;
+    if (!patient) return false;
 
-    const confirmDelete = confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${patient.name}? También se borrarán sus citas programadas.`);
-    if (!confirmDelete) return;
+    const confirmDelete = await confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${patient.name}? También se borrarán sus citas programadas.`);
+    if (!confirmDelete) return false;
 
-    // Filtrar paciente y citas
-    state.patients = state.patients.filter(p => p.id !== patientId);
-    state.appointments = state.appointments.filter(app => app.patientId !== patientId);
+    try {
+        const { error } = await supabaseClient.from('patients').delete().eq('id', patientId);
+        if (error) throw error;
 
-    saveState();
-    renderPatients();
-    renderDashboard();
-    renderCalendar();
-    populatePatientSelect();
+        // Eliminar del estado local
+        state.patients = state.patients.filter(p => p.id !== patientId);
+        state.appointments = state.appointments.filter(app => app.patient_id !== patientId);
+
+        renderPatients();
+        renderDashboard();
+        renderCalendar();
+        populatePatientSelect();
+        return true;
+    } catch (err) {
+        console.error("Error al borrar paciente:", err);
+        alert("Error de red al intentar eliminar el paciente.");
+        return false;
+    }
 }
 
-function triggerDeleteCurrentPatient() {
+async function triggerDeleteCurrentPatient() {
     if (!state.currentPatientId) return;
-    deletePatient(state.currentPatientId);
-    closeModal('modal-clinical-history');
+    const success = await deletePatient(state.currentPatientId);
+    if (success) {
+        closeModal('modal-clinical-history');
+    }
 }
 
 // ==========================================================
@@ -244,8 +434,8 @@ function checkCollision(date, startTime, endTime, skipAppId = null) {
     for (let app of state.appointments) {
         if (app.id === skipAppId) continue;
         if (app.date === date) {
-            const appStart = new Date(`${app.date}T${app.startTime}`);
-            const appEnd = new Date(`${app.date}T${app.endTime}`);
+            const appStart = new Date(`${app.date}T${app.start_time}`);
+            const appEnd = new Date(`${app.date}T${app.end_time}`);
 
             // Validar solapamiento: (StartA < EndB) y (EndA > StartB)
             if (start < appEnd && end > appStart) {
@@ -254,7 +444,7 @@ function checkCollision(date, startTime, endTime, skipAppId = null) {
                     return true;
                 }
                 // Si coinciden en la misma hora exacta para consulta, tambien choca
-                if (app.startTime === startTime) {
+                if (app.start_time === startTime) {
                     return true;
                 }
             }
@@ -263,8 +453,9 @@ function checkCollision(date, startTime, endTime, skipAppId = null) {
     return false;
 }
 
-function saveAppointment(e) {
+async function saveAppointment(e) {
     e.preventDefault();
+    if (!validateForm('form-new-appointment')) return;
     const patientId = document.getElementById('app-patient-select').value;
     const date = document.getElementById('app-date').value;
     const type = document.getElementById('app-type').value;
@@ -276,19 +467,27 @@ function saveAppointment(e) {
         return;
     }
 
-    state.appointments.push({
+    const newApp = {
         id: 'app-' + Date.now(),
-        patientId,
+        patient_id: patientId,
         date,
         type,
-        startTime,
-        endTime
-    });
+        start_time: startTime,
+        end_time: endTime
+    };
 
-    saveState();
-    closeModal('modal-appointment');
-    renderCalendar();
-    renderDashboard();
+    try {
+        const { error } = await supabaseClient.from('appointments').insert([newApp]);
+        if (error) throw error;
+
+        state.appointments.push(newApp);
+        closeModal('modal-appointment');
+        renderCalendar();
+        renderDashboard();
+    } catch (err) {
+        console.error("Error al agendar cita:", err);
+        alert("Ocurrió un error al registrar el horario en el servidor.");
+    }
 }
 
 // ==========================================================
@@ -309,29 +508,50 @@ function openClinicalHistory(patientId) {
     lucide.createIcons();
 }
 
-function showClinicalSubtab(tab) {
-    document.querySelectorAll('.clinical-subtab').forEach(el => el.style.display = 'none');
-    document.getElementById(`subtab-${tab}`).style.display = 'block';
-}
-
 function openNewConsultationFromCurrent() {
     closeModal('modal-clinical-history');
     document.getElementById('form-new-consultation').reset();
+    const container = document.getElementById('next-appointment-container');
+    if (container) container.style.display = 'none';
     
     const patient = state.patients.find(p => p.id === state.currentPatientId);
     if (patient) {
         document.getElementById('new-consultation-title').textContent = `Registrar Consulta de Hoy - ${patient.name}`;
     }
     
+    // Resetear al ojo derecho por defecto al abrir
+    switchEyePanel('od');
+    
     document.getElementById('modal-new-consultation').style.display = 'flex';
     lucide.createIcons();
+}
+
+function switchEyePanel(eye) {
+    const odPanel = document.getElementById('panel-eye-od');
+    const osPanel = document.getElementById('panel-eye-os');
+    const odBtn = document.getElementById('btn-toggle-od');
+    const osBtn = document.getElementById('btn-toggle-os');
+
+    if (!odPanel || !osPanel || !odBtn || !osBtn) return;
+
+    if (eye === 'od') {
+        odPanel.style.display = 'block';
+        osPanel.style.display = 'none';
+        odBtn.classList.add('active');
+        osBtn.classList.remove('active');
+    } else {
+        odPanel.style.display = 'none';
+        osPanel.style.display = 'block';
+        odBtn.classList.remove('active');
+        osBtn.classList.add('active');
+    }
 }
 
 function renderTimeline(patient) {
     const timeline = document.getElementById('clinical-records-timeline');
     if (!timeline) return;
 
-    if (patient.history.length === 0) {
+    if (!patient.history || patient.history.length === 0) {
         timeline.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 2rem;">No hay consultas previas registradas para este paciente.</div>`;
         return;
     }
@@ -393,25 +613,35 @@ function toggleAccordion(elementId) {
     }
 }
 
+function handleNextAppointmentToggle() {
+    const isChecked = document.getElementById('toggle-next-appointment').checked;
+    const container = document.getElementById('next-appointment-container');
+    const input = document.getElementById('c-next-appointment');
+    if (isChecked) {
+        container.style.display = 'block';
+        input.setAttribute('required', 'true');
+    } else {
+        container.style.display = 'none';
+        input.removeAttribute('required');
+        input.value = '';
+    }
+}
+
 function updateWhatsAppPreview() {
     // Ya no es necesario actualizar un contenedor visible de previsualización en el DOM
 }
 
 function generateAndSendWhatsApp() {
+    if (!validateForm('form-new-consultation')) return;
     const patient = state.patients.find(p => p.id === state.currentPatientId);
     if (!patient) return;
 
     const prescription = document.getElementById('c-prescription').value || "Sin indicaciones adicionales.";
     const notes = document.getElementById('c-notes').value || "Evaluación de rutina sin hallazgos inusuales.";
-    const nextDate = document.getElementById('c-next-appointment').value;
+    const hasNextAppointment = document.getElementById('toggle-next-appointment').checked;
+    const nextDate = hasNextAppointment ? document.getElementById('c-next-appointment').value : null;
 
-    let message = `Saludos, ${patient.name}
-
-En la consulta de hoy se determinaron las siguientes observaciones:
-${notes}
-
-Tratamiento e indicaciones a seguir:
-${prescription}`;
+    let message = `Saludos, ${patient.name}\n\nEn la consulta de hoy se determinaron las siguientes observaciones:\n${notes}\n\nTratamiento e indicaciones a seguir:\n${prescription}`;
 
     if (nextDate) {
         message += `\n\nPróxima cita programada: ${nextDate}`;
@@ -422,16 +652,20 @@ ${prescription}`;
     window.open(url, '_blank');
 }
 
-function saveConsultation(e) {
+async function saveConsultation(e) {
     e.preventDefault();
+    if (!validateForm('form-new-consultation')) return;
     const patientIndex = state.patients.findIndex(p => p.id === state.currentPatientId);
     if (patientIndex === -1) return;
+
+    const hasNextAppointment = document.getElementById('toggle-next-appointment').checked;
+    const nextAppointmentValue = hasNextAppointment ? (document.getElementById('c-next-appointment').value || null) : null;
 
     const newRecord = {
         date: new Date().toISOString().split('T')[0],
         notes: document.getElementById('c-notes').value,
         prescription: document.getElementById('c-prescription').value,
-        nextAppointment: document.getElementById('c-next-appointment').value || null,
+        nextAppointment: nextAppointmentValue,
         od: {
             esfera: document.getElementById('od-esfera').value,
             cilindro: document.getElementById('od-cilindro').value,
@@ -448,26 +682,46 @@ function saveConsultation(e) {
         }
     };
 
-    // Asegurar inserción al inicio (más reciente arriba)
-    state.patients[patientIndex].history.unshift(newRecord);
-    
-    // Si la doctora seteó una próxima cita, la agregamos a la agenda automáticamente
-    if (newRecord.nextAppointment) {
-        state.appointments.push({
-            id: 'app-' + Date.now(),
-            patientId: state.currentPatientId,
-            date: newRecord.nextAppointment,
-            type: 'control',
-            startTime: "09:00",
-            endTime: "09:30"
-        });
-    }
+    // Agregar registro al historial
+    const updatedHistory = [...(state.patients[patientIndex].history || [])];
+    updatedHistory.unshift(newRecord);
 
-    saveState();
-    closeModal('modal-new-consultation');
-    renderPatients();
-    renderDashboard();
-    renderCalendar();
+    try {
+        // Guardar el historial actualizado en Supabase
+        const { error: patientErr } = await supabaseClient
+            .from('patients')
+            .update({ history: updatedHistory })
+            .eq('id', state.currentPatientId);
+
+        if (patientErr) throw patientErr;
+
+        state.patients[patientIndex].history = updatedHistory;
+
+        // Si hay próxima cita programada, guardarla en la tabla appointments
+        if (newRecord.nextAppointment) {
+            const newApp = {
+                id: 'app-' + Date.now(),
+                patient_id: state.currentPatientId,
+                date: newRecord.nextAppointment,
+                type: 'control',
+                start_time: "09:00",
+                end_time: "09:30"
+            };
+
+            const { error: appErr } = await supabaseClient.from('appointments').insert([newApp]);
+            if (appErr) throw appErr;
+
+            state.appointments.push(newApp);
+        }
+
+        closeModal('modal-new-consultation');
+        renderPatients();
+        renderDashboard();
+        renderCalendar();
+    } catch (err) {
+        console.error("Error al guardar consulta clínica:", err);
+        alert("Ocurrió un error al guardar la consulta en el servidor remoto.");
+    }
 }
 
 // ==========================================================
@@ -508,9 +762,9 @@ function renderCalendar() {
         if (dayEvents.length > 0) {
             eventsHTML = `<div class="calendar-events">` + 
                 dayEvents.map(app => {
-                    const patient = state.patients.find(p => p.id === app.patientId);
+                    const patient = state.patients.find(p => p.id === app.patient_id);
                     const name = patient ? patient.name.split(' ')[0] : 'Pac.';
-                    return `<span class="badge-event badge-${app.type}" title="${app.startTime} - ${app.type.toUpperCase()}: ${name}">${app.startTime} ${name}</span>`;
+                    return `<span class="badge-event badge-${app.type}" title="${app.start_time} - ${app.type.toUpperCase()}: ${name}" oncontextmenu="event.stopPropagation(); showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">${app.start_time} ${name}</span>`;
                 }).join('') + `</div>`;
         }
 
@@ -565,23 +819,106 @@ function renderDashboard() {
     }
 
     // Ordenar por hora
-    todayApps.sort((a,b) => a.startTime.localeCompare(b.startTime));
+    todayApps.sort((a,b) => a.start_time.localeCompare(b.start_time));
 
     todayEventsList.innerHTML = todayApps.map(app => {
-        const patient = state.patients.find(p => p.id === app.patientId);
+        const patient = state.patients.find(p => p.id === app.patient_id);
         const patientName = patient ? patient.name : 'Desconocido';
         const typeBadge = `<span class="badge-event badge-${app.type}" style="display:inline-block; padding: 4px 8px;">${app.type === 'cirugia' ? 'Cirugía' : app.type === 'consulta' ? 'Consulta' : 'Control'}</span>`;
+        
+        // Verificar si la consulta fue realizada (tiene registro en el historial para la fecha de la cita)
+        const hasConsultation = patient && patient.history && patient.history.some(h => h.date === app.date);
+        
+        let actionButton = 'N/A';
+        if (app.type !== 'cirugia') {
+            if (hasConsultation) {
+                actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem; background: #64748b; box-shadow: 0 4px 10px rgba(100, 116, 139, 0.2);" onclick="openClinicalHistory('${app.patient_id}')">Chequear Consulta</button>`;
+            } else {
+                actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="openNewConsultationDirectly('${app.patient_id}')">Iniciar Consulta</button>`;
+            }
+        }
+
         return `
-            <tr style="border-bottom: 1px solid var(--border-color);">
-                <td style="padding: 16px; font-weight:600;">${app.startTime} - ${app.endTime}</td>
+            <tr style="border-bottom: 1px solid var(--border-color); cursor: context-menu;" oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">
+                <td style="padding: 16px; font-weight:600;">${app.start_time} - ${app.end_time}</td>
                 <td style="padding: 16px;">${patientName}</td>
                 <td style="padding: 16px;">${typeBadge}</td>
                 <td style="padding: 16px;">
-                    ${app.type !== 'cirugia' ? `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="openClinicalHistory('${app.patientId}')">Iniciar Consulta</button>` : 'N/A'}
+                    ${actionButton}
                 </td>
             </tr>
         `;
     }).join('');
+    lucide.createIcons();
+}
+
+function openNewConsultationDirectly(patientId) {
+    state.currentPatientId = patientId;
+    const patient = state.patients.find(p => p.id === patientId);
+    document.getElementById('form-new-consultation').reset();
+    const container = document.getElementById('next-appointment-container');
+    if (container) container.style.display = 'none';
+    
+    if (patient) {
+        document.getElementById('new-consultation-title').textContent = `Registrar Consulta de Hoy - ${patient.name}`;
+    }
+    
+    // Resetear al ojo derecho por defecto al abrir
+    switchEyePanel('od');
+    
+    document.getElementById('modal-new-consultation').style.display = 'flex';
+    lucide.createIcons();
+}
+
+function showContextMenu(e, appId, appType, patientId) {
+    e.preventDefault();
+    const menu = document.getElementById('custom-context-menu');
+    if (!menu) return;
+
+    let menuHTML = '';
+    // Si no es cirugía (o sea, es cita/control), mostramos la opción de Ver
+    if (appType !== 'cirugia') {
+        menuHTML += `
+            <div class="context-menu-item" onclick="openClinicalHistory('${patientId}')">
+                <i data-lucide="eye" style="width:16px; height:16px;"></i> Ver Historial
+            </div>
+        `;
+    }
+    
+    // Opción común de Eliminar
+    menuHTML += `
+        <div class="context-menu-item delete" onclick="deleteAppointment('${appId}')">
+            <i data-lucide="trash-2" style="width:16px; height:16px;"></i> Eliminar
+        </div>
+    `;
+
+    menu.innerHTML = menuHTML;
+    menu.style.display = 'block';
+    
+    // Posicionar el menú donde se hizo clic
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
+    
+    lucide.createIcons();
+}
+
+async function deleteAppointment(appId) {
+    const confirmDelete = await confirm("¿Estás seguro de que deseas eliminar este evento/cirugía de la agenda?");
+    if (!confirmDelete) return;
+
+    try {
+        const { error } = await supabaseClient.from('appointments').delete().eq('id', appId);
+        if (error) throw error;
+
+        // Quitar del estado local
+        state.appointments = state.appointments.filter(app => app.id !== appId);
+        
+        renderDashboard();
+        renderCalendar();
+    } catch (err) {
+        console.error("Error al eliminar cita/cirugía:", err);
+        alert("Ocurrió un error al intentar eliminar el evento en el servidor.");
+    }
 }
 
 // Búsqueda global
