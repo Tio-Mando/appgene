@@ -1233,12 +1233,14 @@ function renderDashboard() {
 
         const checkboxCell = state.dashboardDeleteMode ? `
             <td style="padding: 16px; text-align: center;">
-                <input type="checkbox" class="delete-app-checkbox" value="${app.id}" style="width: 18px; height: 18px; cursor: pointer;">
+                <input type="checkbox" class="delete-app-checkbox" value="${app.id}" id="chk-${app.id}" style="width: 18px; height: 18px; cursor: pointer;" onclick="event.stopPropagation();">
             </td>
         ` : '';
 
+        const rowClickAction = state.dashboardDeleteMode ? `onclick="toggleRowCheckbox(event, 'chk-${app.id}')" style="cursor: pointer;"` : 'style="cursor: context-menu;"';
+
         return `
-            <tr ${rowClass} style="border-bottom: 1px solid var(--border-color); cursor: context-menu;" oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">
+            <tr ${rowClass} ${rowClickAction} oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')" style="border-bottom: 1px solid var(--border-color);">
                 ${checkboxCell}
                 <td style="padding: 16px; font-weight:600;">${app.start_time} - ${app.end_time}</td>
                 <td style="padding: 16px;">${patientName}</td>
@@ -1388,5 +1390,15 @@ async function confirmDashboardDelete() {
     } catch (err) {
         console.error("Error al eliminar citas seleccionadas:", err);
         alert("Ocurrió un error al intentar eliminar las citas.");
+    }
+}
+
+function toggleRowCheckbox(event, checkboxId) {
+    if (event.target.closest('button') || event.target.closest('a') || event.target.closest('input[type="checkbox"]')) {
+        return;
+    }
+    const cb = document.getElementById(checkboxId);
+    if (cb) {
+        cb.checked = !cb.checked;
     }
 }
