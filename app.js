@@ -312,6 +312,14 @@ function openNewPatientModal() {
 
 function openNewAppointmentModal() {
     document.getElementById('form-new-appointment').reset();
+    
+    // Predeterminar fecha actual en formato local YYYY-MM-DD
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('app-date').value = `${yyyy}-${mm}-${dd}`;
+    
     populatePatientSelect();
     document.getElementById('modal-appointment').style.display = 'flex';
 }
