@@ -33,6 +33,8 @@ window.alert = function(message, title = "Aviso") {
     iconContainer.style.color = "var(--color-primary)";
     titleEl.textContent = title;
     messageEl.textContent = message;
+    messageEl.style.whiteSpace = 'pre-wrap';
+    messageEl.style.textAlign = message.includes('\n') ? 'left' : 'center';
     
     // Ocultar botón de cancelar para un simple Alert
     btnCancel.style.display = 'none';
@@ -65,6 +67,8 @@ window.confirm = function(message, title = "Confirmar Acción") {
     iconContainer.style.color = "var(--color-warning)";
     titleEl.textContent = title;
     messageEl.textContent = message;
+    messageEl.style.whiteSpace = 'pre-wrap';
+    messageEl.style.textAlign = message.includes('\n') ? 'left' : 'center';
     
     // Mostrar botones
     btnCancel.style.display = 'inline-block';
@@ -453,6 +457,69 @@ function checkCollision(date, startTime, endTime, skipAppId = null) {
     return false;
 }
 
+function timeToMinutes(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+}
+
+function minutesToTime(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function isValidSlot(date, type, startTime, endTime) {
+    const start = new Date(`${date}T${startTime}`);
+    const end = new Date(`${date}T${endTime}`);
+    
+    for (let app of state.appointments) {
+        if (app.date === date) {
+            const appStart = new Date(`${app.date}T${app.start_time}`);
+            const appEnd = new Date(`${app.date}T${app.end_time}`);
+            
+            if (start < appEnd && end > appStart) {
+                if (app.type === 'cirugia' || type === 'cirugia' || app.start_time === startTime) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+function getAvailableWindows(date, type, duration) {
+    const workStart = 8 * 60; // 08:00
+    const workEnd = 18 * 60;  // 18:00
+    
+    const validStarts = [];
+    for (let m = workStart; m <= workEnd - duration; m += 5) {
+        const startStr = minutesToTime(m);
+        const endStr = minutesToTime(m + duration);
+        if (isValidSlot(date, type, startStr, endStr)) {
+            validStarts.push(m);
+        }
+    }
+    
+    if (validStarts.length === 0) return [];
+    
+    const ranges = [];
+    let startRange = validStarts[0];
+    let prev = validStarts[0];
+    
+    for (let i = 1; i < validStarts.length; i++) {
+        if (validStarts[i] === prev + 5) {
+            prev = validStarts[i];
+        } else {
+            ranges.push({ start: startRange, end: prev + duration });
+            startRange = validStarts[i];
+            prev = validStarts[i];
+        }
+    }
+    ranges.push({ start: startRange, end: prev + duration });
+    
+    return ranges.map(r => `${minutesToTime(r.start)} a ${minutesToTime(r.end)}`);
+}
+
 async function saveAppointment(e) {
     e.preventDefault();
     if (!validateForm('form-new-appointment')) return;
@@ -462,8 +529,50 @@ async function saveAppointment(e) {
     const startTime = document.getElementById('app-start-time').value;
     const endTime = document.getElementById('app-end-time').value;
 
-    if (checkCollision(date, startTime, endTime)) {
-        await alert("El horario seleccionado se solapa con una Cirugía u otra cita programada.", "Conflicto de Horario");
+    const collisions = [];
+    const start = new Date(`${date}T${startTime}`);
+    const end = new Date(`${date}T${endTime}`);
+
+    for (let app of state.appointments) {
+        if (app.date === date) {
+            const appStart = new Date(`${app.date}T${app.start_time}`);
+            const appEnd = new Date(`${app.date}T${app.end_time}`);
+
+            if (start < appEnd && end > appStart) {
+                if (app.type === 'cirugia' || type === 'cirugia' || app.start_time === startTime) {
+                    collisions.push(app);
+                }
+            }
+        }
+    }
+
+    if (collisions.length > 0) {
+        const collisionDetails = collisions.map(app => {
+            const patient = state.patients.find(p => p.id === app.patient_id);
+            const patientName = patient ? patient.name : 'Paciente';
+            const baseType = app.type.replace('_completed', '');
+            const typeLabel = baseType === 'cirugia' ? 'Cirugía' : baseType === 'consulta' ? 'Consulta' : 'Control';
+            return `• ${typeLabel} de ${patientName} (${app.start_time} - ${app.end_time})`;
+        }).join('\n');
+
+        // Calcular duración
+        const startMins = timeToMinutes(startTime);
+        const endMins = timeToMinutes(endTime);
+        const duration = endMins - startMins;
+
+        // Obtener ventanas de tiempo disponibles
+        const availableWindows = getAvailableWindows(date, type, duration);
+        let chanceMsg = "";
+        if (availableWindows.length > 0) {
+            chanceMsg = `\n\nHorarios disponibles para esta duración hoy:\n${availableWindows.map(w => `• ${w}`).join('\n')}`;
+        } else {
+            chanceMsg = `\n\nNo hay horarios disponibles para esta duración hoy.`;
+        }
+
+        await alert(
+            `El horario seleccionado se solapa con:\n${collisionDetails}${chanceMsg}`, 
+            "Conflicto de Horario"
+        );
         return;
     }
 
