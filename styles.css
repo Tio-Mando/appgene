@@ -968,3 +968,14 @@ header.top-header {
     box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25) !important;
 }
 
+/* Animación y Clase para citas próximas en Dashboard (falta menos de 20 min) */
+@keyframes pulse-blue {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(14, 165, 233, 0.2); } /* Azul claro con opacidad */
+    100% { background-color: transparent; }
+}
+
+.blink-blue {
+    animation: pulse-blue 1.5s infinite ease-in-out;
+}
+

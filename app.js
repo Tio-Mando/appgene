@@ -297,6 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (formNewConsultation) {
         formNewConsultation.addEventListener('input', updateWhatsAppPreview);
     }
+
+    // Auto-refrescar dashboard cada 30 segundos para actualizar el estado de parpadeo de las citas cercanas
+    setInterval(renderDashboard, 30000);
 });
 
 function renderAllViews() {
@@ -1191,8 +1194,20 @@ function renderDashboard() {
             }
         }
 
+        // Parpadeo de color azul claro si faltan menos de 20 minutos (o ya comenzó/pasó) y no está realizada
+        let rowClass = "";
+        if (!isCompleted) {
+            const now = new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            const startMinutes = timeToMinutes(app.start_time);
+            const diff = startMinutes - nowMinutes;
+            if (diff <= 20) {
+                rowClass = "class='blink-blue'";
+            }
+        }
+
         return `
-            <tr style="border-bottom: 1px solid var(--border-color); cursor: context-menu;" oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">
+            <tr ${rowClass} style="border-bottom: 1px solid var(--border-color); cursor: context-menu;" oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">
                 <td style="padding: 16px; font-weight:600;">${app.start_time} - ${app.end_time}</td>
                 <td style="padding: 16px;">${patientName}</td>
                 <td style="padding: 16px;">${typeBadge}</td>
