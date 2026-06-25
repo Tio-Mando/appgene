@@ -10,6 +10,7 @@ let state = {
     patients: [],
     appointments: [],
     currentPatientId: null,
+    currentAppointmentId: null,
     currentDate: new Date(),
     theme: localStorage.getItem('appgene_theme') || 'light'
 };
@@ -511,6 +512,7 @@ function openClinicalHistory(patientId) {
 function openNewConsultationFromCurrent() {
     closeModal('modal-clinical-history');
     document.getElementById('form-new-consultation').reset();
+    state.currentAppointmentId = null; // No viene de una cita específica
     const container = document.getElementById('next-appointment-container');
     if (container) container.style.display = 'none';
     
@@ -697,6 +699,38 @@ async function saveConsultation(e) {
 
         state.patients[patientIndex].history = updatedHistory;
 
+        // Determinar qué cita marcar como completada
+        let appointmentToCompleteId = state.currentAppointmentId;
+        if (!appointmentToCompleteId) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const matchingApp = state.appointments.find(app => 
+                app.patient_id === state.currentPatientId && 
+                app.date === todayStr && 
+                (app.type === 'consulta' || app.type === 'control')
+            );
+            if (matchingApp) {
+                appointmentToCompleteId = matchingApp.id;
+            }
+        }
+
+        if (appointmentToCompleteId) {
+            const appIndex = state.appointments.findIndex(app => app.id === appointmentToCompleteId);
+            if (appIndex !== -1) {
+                const app = state.appointments[appIndex];
+                if (!app.type.endsWith('_completed')) {
+                    const newType = app.type + '_completed';
+                    const { error: appUpdateErr } = await supabaseClient
+                        .from('appointments')
+                        .update({ type: newType })
+                        .eq('id', appointmentToCompleteId);
+                    
+                    if (!appUpdateErr) {
+                        state.appointments[appIndex].type = newType;
+                    }
+                }
+            }
+        }
+
         // Si hay próxima cita programada, guardarla en la tabla appointments
         if (newRecord.nextAppointment) {
             const newApp = {
@@ -824,17 +858,19 @@ function renderDashboard() {
     todayEventsList.innerHTML = todayApps.map(app => {
         const patient = state.patients.find(p => p.id === app.patient_id);
         const patientName = patient ? patient.name : 'Desconocido';
-        const typeBadge = `<span class="badge-event badge-${app.type}" style="display:inline-block; padding: 4px 8px;">${app.type === 'cirugia' ? 'Cirugía' : app.type === 'consulta' ? 'Consulta' : 'Control'}</span>`;
         
-        // Verificar si la consulta fue realizada (tiene registro en el historial para la fecha de la cita)
-        const hasConsultation = patient && patient.history && patient.history.some(h => h.date === app.date);
+        // Formatear el badge del tipo de cita y si fue realizada
+        const baseType = app.type.replace('_completed', '');
+        const typeLabel = baseType === 'cirugia' ? 'Cirugía' : baseType === 'consulta' ? 'Consulta' : 'Control';
+        const isCompleted = app.type.endsWith('_completed');
+        const typeBadge = `<span class="badge-event badge-${baseType}${isCompleted ? '_completed' : ''}" style="display:inline-block; padding: 4px 8px;">${typeLabel}${isCompleted ? ' (Realizada)' : ''}</span>`;
         
         let actionButton = 'N/A';
-        if (app.type !== 'cirugia') {
-            if (hasConsultation) {
+        if (baseType !== 'cirugia') {
+            if (isCompleted) {
                 actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem; background: #64748b; box-shadow: 0 4px 10px rgba(100, 116, 139, 0.2);" onclick="openClinicalHistory('${app.patient_id}')">Chequear Consulta</button>`;
             } else {
-                actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="openNewConsultationDirectly('${app.patient_id}')">Iniciar Consulta</button>`;
+                actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="openNewConsultationDirectly('${app.patient_id}', '${app.id}')">Iniciar Consulta</button>`;
             }
         }
 
@@ -852,8 +888,9 @@ function renderDashboard() {
     lucide.createIcons();
 }
 
-function openNewConsultationDirectly(patientId) {
+function openNewConsultationDirectly(patientId, appId) {
     state.currentPatientId = patientId;
+    state.currentAppointmentId = appId || null;
     const patient = state.patients.find(p => p.id === patientId);
     document.getElementById('form-new-consultation').reset();
     const container = document.getElementById('next-appointment-container');

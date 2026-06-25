@@ -507,6 +507,13 @@ header.top-header {
     background-color: var(--color-warning);
 }
 
+.badge-consulta_completed,
+.badge-control_completed {
+    background-color: var(--text-muted) !important;
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
 /* Modal overlay styling */
 .modal-overlay {
     position: fixed;
