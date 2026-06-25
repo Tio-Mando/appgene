@@ -744,6 +744,35 @@ async function saveAppointment(e) {
             if (selectedSlot) {
                 document.getElementById('app-start-time').value = selectedSlot.start;
                 document.getElementById('app-end-time').value = selectedSlot.end;
+
+                // Verificar si el paciente ya tiene otra cita ese mismo día
+                const existingApp = state.appointments.find(app => app.patient_id === patientId && app.date === date);
+                if (existingApp) {
+                    const confirmDuplicate = await confirm(`Este cliente tuvo una cita hoy a las ${existingApp.start_time}. ¿Seguro deseas crear otra cita para hoy?`, "Cita Duplicada");
+                    if (!confirmDuplicate) return;
+                }
+
+                const newApp = {
+                    id: 'app-' + Date.now(),
+                    patient_id: patientId,
+                    date,
+                    type,
+                    start_time: selectedSlot.start,
+                    end_time: selectedSlot.end
+                };
+
+                try {
+                    const { error } = await supabaseClient.from('appointments').insert([newApp]);
+                    if (error) throw error;
+
+                    state.appointments.push(newApp);
+                    closeModal('modal-appointment');
+                    renderCalendar();
+                    renderDashboard();
+                } catch (err) {
+                    console.error("Error al registrar cita automática:", err);
+                    alert("Ocurrió un error al registrar el horario en el servidor.");
+                }
             }
         }
         return;
