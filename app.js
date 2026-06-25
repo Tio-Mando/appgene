@@ -25,8 +25,15 @@ window.alert = function(message, title = "Aviso") {
     const btnCancel = document.getElementById('btn-confirm-cancel');
     const btnAccept = document.getElementById('btn-confirm-accept');
     const iconContainer = document.getElementById('confirm-icon-container');
+    const optionsContainer = document.getElementById('confirm-options-container');
 
     if (!modal) return;
+
+    // Limpiar contenedor de opciones extras
+    if (optionsContainer) {
+        optionsContainer.style.display = 'none';
+        optionsContainer.innerHTML = '';
+    }
 
     // Configurar iconos y textos
     iconContainer.innerHTML = `<i data-lucide="info" style="width: 48px; height: 48px; stroke-width: 1.5;"></i>`;
@@ -38,6 +45,7 @@ window.alert = function(message, title = "Aviso") {
     
     // Ocultar botón de cancelar para un simple Alert
     btnCancel.style.display = 'none';
+    btnAccept.style.display = 'inline-block';
     btnAccept.textContent = "Aceptar";
     btnAccept.style.background = "var(--color-primary)";
     
@@ -59,8 +67,15 @@ window.confirm = function(message, title = "Confirmar Acción") {
     const btnCancel = document.getElementById('btn-confirm-cancel');
     const btnAccept = document.getElementById('btn-confirm-accept');
     const iconContainer = document.getElementById('confirm-icon-container');
+    const optionsContainer = document.getElementById('confirm-options-container');
 
     if (!modal) return;
+
+    // Limpiar contenedor de opciones extras
+    if (optionsContainer) {
+        optionsContainer.style.display = 'none';
+        optionsContainer.innerHTML = '';
+    }
 
     // Configurar iconos y textos
     iconContainer.innerHTML = `<i data-lucide="help-circle" style="width: 48px; height: 48px; stroke-width: 1.5;"></i>`;
@@ -72,6 +87,7 @@ window.confirm = function(message, title = "Confirmar Acción") {
     
     // Mostrar botones
     btnCancel.style.display = 'inline-block';
+    btnAccept.style.display = 'inline-block';
     btnAccept.textContent = "Confirmar";
     btnAccept.style.background = "var(--color-danger)";
     
@@ -86,6 +102,121 @@ window.confirm = function(message, title = "Confirmar Acción") {
         btnCancel.onclick = () => {
             modal.style.display = 'none';
             resolve(false);
+        };
+    });
+};
+
+window.alertWithOptions = function(message, title = "Aviso", extraButtons = []) {
+    const modal = document.getElementById('modal-confirm');
+    const titleEl = document.getElementById('confirm-title');
+    const messageEl = document.getElementById('confirm-message');
+    const btnCancel = document.getElementById('btn-confirm-cancel');
+    const btnAccept = document.getElementById('btn-confirm-accept');
+    const iconContainer = document.getElementById('confirm-icon-container');
+    const optionsContainer = document.getElementById('confirm-options-container');
+
+    if (!modal) return Promise.resolve(null);
+
+    // Configurar iconos y textos
+    iconContainer.innerHTML = `<i data-lucide="info" style="width: 48px; height: 48px; stroke-width: 1.5;"></i>`;
+    iconContainer.style.color = "var(--color-primary)";
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    messageEl.style.whiteSpace = 'pre-wrap';
+    messageEl.style.textAlign = message.includes('\n') ? 'left' : 'center';
+
+    // Ocultar botón de cancelar para un simple Alert
+    btnCancel.style.display = 'none';
+    btnAccept.style.display = 'inline-block';
+    btnAccept.textContent = "Aceptar";
+    btnAccept.style.background = "var(--color-primary)";
+
+    if (extraButtons.length > 0) {
+        optionsContainer.innerHTML = extraButtons.map((btn, index) => {
+            return `<button class="btn-primary" style="background: var(--color-accent); color: white; padding: 10px; width: 100%; border-radius: var(--radius-sm); border: none; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.2s;" data-extra-btn-index="${index}">${btn.text}</button>`;
+        }).join('');
+        optionsContainer.style.display = 'flex';
+    } else {
+        optionsContainer.style.display = 'none';
+        optionsContainer.innerHTML = '';
+    }
+
+    modal.style.display = 'flex';
+    lucide.createIcons();
+
+    return new Promise((resolve) => {
+        btnAccept.onclick = () => {
+            modal.style.display = 'none';
+            optionsContainer.style.display = 'none';
+            optionsContainer.innerHTML = '';
+            resolve('accept');
+        };
+
+        if (extraButtons.length > 0) {
+            const elButtons = optionsContainer.querySelectorAll('button');
+            elButtons.forEach(btn => {
+                btn.onclick = () => {
+                    const idx = parseInt(btn.getAttribute('data-extra-btn-index'));
+                    modal.style.display = 'none';
+                    optionsContainer.style.display = 'none';
+                    optionsContainer.innerHTML = '';
+                    resolve(extraButtons[idx].value);
+                };
+            });
+        }
+    });
+};
+
+window.promptSlots = function(message, slots, title = "Seleccionar Horario") {
+    const modal = document.getElementById('modal-confirm');
+    const titleEl = document.getElementById('confirm-title');
+    const messageEl = document.getElementById('confirm-message');
+    const btnCancel = document.getElementById('btn-confirm-cancel');
+    const btnAccept = document.getElementById('btn-confirm-accept');
+    const iconContainer = document.getElementById('confirm-icon-container');
+    const optionsContainer = document.getElementById('confirm-options-container');
+
+    if (!modal) return Promise.resolve(null);
+
+    // Configurar iconos y textos
+    iconContainer.innerHTML = `<i data-lucide="clock" style="width: 48px; height: 48px; stroke-width: 1.5;"></i>`;
+    iconContainer.style.color = "var(--color-primary)";
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    messageEl.style.whiteSpace = 'pre-wrap';
+    messageEl.style.textAlign = 'center';
+
+    // Mostrar opciones como botones
+    optionsContainer.innerHTML = slots.map((slot, index) => {
+        return `<button class="btn-primary" style="background: var(--color-success); color: white; padding: 10px; width: 100%; border-radius: var(--radius-sm); border: none; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; margin-bottom: 5px;" data-slot-index="${index}">${slot.start} a ${slot.end}</button>`;
+    }).join('');
+    optionsContainer.style.display = 'flex';
+
+    // Configurar botones de cancelar/aceptar
+    btnCancel.style.display = 'inline-block';
+    btnCancel.textContent = "Cancelar";
+    btnAccept.style.display = 'none';
+
+    modal.style.display = 'flex';
+    lucide.createIcons();
+
+    return new Promise((resolve) => {
+        const buttons = optionsContainer.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.onclick = () => {
+                const idx = parseInt(btn.getAttribute('data-slot-index'));
+                modal.style.display = 'none';
+                optionsContainer.style.display = 'none';
+                optionsContainer.innerHTML = '';
+                resolve(slots[idx]);
+            };
+        });
+
+        btnCancel.onclick = () => {
+            modal.style.display = 'none';
+            optionsContainer.style.display = 'none';
+            optionsContainer.innerHTML = '';
+            resolve(null);
         };
     });
 };
@@ -528,6 +659,21 @@ function getAvailableWindows(date, type, duration) {
     return ranges.map(r => `${minutesToTime(r.start)} a ${minutesToTime(r.end)}`);
 }
 
+function getFirstThreeSlots(date, type, duration) {
+    const workStart = 8 * 60; // 08:00
+    const workEnd = 18 * 60;  // 18:00
+    const slots = [];
+    for (let m = workStart; m <= workEnd - duration; m += 15) {
+        const startStr = minutesToTime(m);
+        const endStr = minutesToTime(m + duration);
+        if (isValidSlot(date, type, startStr, endStr)) {
+            slots.push({ start: startStr, end: endStr });
+            if (slots.length === 3) break;
+        }
+    }
+    return slots;
+}
+
 async function saveAppointment(e) {
     e.preventDefault();
     if (!validateForm('form-new-appointment')) return;
@@ -577,10 +723,29 @@ async function saveAppointment(e) {
             chanceMsg = `\n\nNo hay horarios disponibles para esta duración hoy.`;
         }
 
-        await alert(
+        const firstThreeSlots = getFirstThreeSlots(date, type, duration);
+        const extraBtns = [];
+        if (firstThreeSlots.length > 0) {
+            extraBtns.push({ text: "Habilitar 3 primeras horas libres", value: "show_slots" });
+        }
+
+        const choice = await alertWithOptions(
             `El horario seleccionado se solapa con:\n${collisionDetails}${chanceMsg}`, 
-            "Conflicto de Horario"
+            "Conflicto de Horario",
+            extraBtns
         );
+
+        if (choice === 'show_slots') {
+            const selectedSlot = await promptSlots(
+                "Puedes seleccionar una de estas horas:",
+                firstThreeSlots,
+                "Horas Disponibles"
+            );
+            if (selectedSlot) {
+                document.getElementById('app-start-time').value = selectedSlot.start;
+                document.getElementById('app-end-time').value = selectedSlot.end;
+            }
+        }
         return;
     }
 
