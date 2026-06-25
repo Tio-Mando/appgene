@@ -12,7 +12,8 @@ let state = {
     currentPatientId: null,
     currentAppointmentId: null,
     currentDate: new Date(),
-    theme: localStorage.getItem('appgene_theme') || 'light'
+    theme: localStorage.getItem('appgene_theme') || 'light',
+    dashboardDeleteMode: false
 };
 
 // ==========================================================
@@ -1165,10 +1166,34 @@ function renderDashboard() {
 
     // Tabla del dia
     const todayEventsList = document.getElementById('today-events-list');
-    if (!todayEventsList) return;
+    const todayEventsHeader = document.getElementById('today-events-header');
+    if (!todayEventsList || !todayEventsHeader) return;
+
+    // Renderizar cabecera según el modo de eliminación
+    if (state.dashboardDeleteMode) {
+        todayEventsHeader.innerHTML = `
+            <tr style="background-color: var(--bg-app); border-bottom: 1px solid var(--border-color);">
+                <th style="padding: 16px; width: 40px; text-align: center;"></th>
+                <th style="padding: 16px;">Hora</th>
+                <th style="padding: 16px;">Paciente</th>
+                <th style="padding: 16px;">Tipo</th>
+                <th style="padding: 16px;">Acción</th>
+            </tr>
+        `;
+    } else {
+        todayEventsHeader.innerHTML = `
+            <tr style="background-color: var(--bg-app); border-bottom: 1px solid var(--border-color);">
+                <th style="padding: 16px;">Hora</th>
+                <th style="padding: 16px;">Paciente</th>
+                <th style="padding: 16px;">Tipo</th>
+                <th style="padding: 16px;">Acción</th>
+            </tr>
+        `;
+    }
 
     if (todayApps.length === 0) {
-        todayEventsList.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No tienes citas o cirugías programadas para hoy.</td></tr>`;
+        const colspan = state.dashboardDeleteMode ? 5 : 4;
+        todayEventsList.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; padding: 2rem; color: var(--text-muted);">No tienes citas o cirugías programadas para hoy.</td></tr>`;
         return;
     }
 
@@ -1206,8 +1231,15 @@ function renderDashboard() {
             }
         }
 
+        const checkboxCell = state.dashboardDeleteMode ? `
+            <td style="padding: 16px; text-align: center;">
+                <input type="checkbox" class="delete-app-checkbox" value="${app.id}" style="width: 18px; height: 18px; cursor: pointer;">
+            </td>
+        ` : '';
+
         return `
             <tr ${rowClass} style="border-bottom: 1px solid var(--border-color); cursor: context-menu;" oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">
+                ${checkboxCell}
                 <td style="padding: 16px; font-weight:600;">${app.start_time} - ${app.end_time}</td>
                 <td style="padding: 16px;">${patientName}</td>
                 <td style="padding: 16px;">${typeBadge}</td>
@@ -1315,4 +1347,46 @@ function handleGlobalSearch() {
         </tr>
     `).join('');
     lucide.createIcons();
+}
+
+function enterDashboardDeleteMode() {
+    state.dashboardDeleteMode = true;
+    document.getElementById('btn-dashboard-trash').style.display = 'none';
+    document.getElementById('btn-dashboard-delete-confirm').style.display = 'inline-block';
+    document.getElementById('btn-dashboard-delete-cancel').style.display = 'inline-block';
+    renderDashboard();
+}
+
+function exitDashboardDeleteMode() {
+    state.dashboardDeleteMode = false;
+    document.getElementById('btn-dashboard-trash').style.display = 'inline-flex';
+    document.getElementById('btn-dashboard-delete-confirm').style.display = 'none';
+    document.getElementById('btn-dashboard-delete-cancel').style.display = 'none';
+    renderDashboard();
+}
+
+async function confirmDashboardDelete() {
+    const checkboxes = document.querySelectorAll('.delete-app-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert("Por favor, seleccione al menos una cita para eliminar.");
+        return;
+    }
+
+    const confirmDelete = await confirm(`¿Estás seguro de que deseas eliminar las ${checkboxes.length} citas seleccionadas?`);
+    if (!confirmDelete) return;
+
+    const idsToDelete = Array.from(checkboxes).map(cb => cb.value);
+
+    try {
+        const { error } = await supabaseClient.from('appointments').delete().in('id', idsToDelete);
+        if (error) throw error;
+
+        state.appointments = state.appointments.filter(app => !idsToDelete.includes(app.id));
+
+        exitDashboardDeleteMode();
+        renderCalendar();
+    } catch (err) {
+        console.error("Error al eliminar citas seleccionadas:", err);
+        alert("Ocurrió un error al intentar eliminar las citas.");
+    }
 }
