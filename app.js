@@ -299,6 +299,21 @@ document.addEventListener('DOMContentLoaded', () => {
         formNewConsultation.addEventListener('input', updateWhatsAppPreview);
     }
 
+    // Auto-rellenar hora de fin con 1 hora de diferencia respecto a la de inicio
+    const startTimeInput = document.getElementById('app-start-time');
+    const endTimeInput = document.getElementById('app-end-time');
+    if (startTimeInput && endTimeInput) {
+        startTimeInput.addEventListener('change', () => {
+            const startVal = startTimeInput.value;
+            if (startVal) {
+                const [h, m] = startVal.split(':').map(Number);
+                const endH = (h + 1) % 24;
+                const endTimeStr = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                endTimeInput.value = endTimeStr;
+            }
+        });
+    }
+
     // Auto-refrescar dashboard cada 30 segundos para actualizar el estado de parpadeo de las citas cercanas
     setInterval(renderDashboard, 30000);
 });
