@@ -726,7 +726,7 @@ async function saveAppointment(e) {
         const firstThreeSlots = getFirstThreeSlots(date, type, duration);
         const extraBtns = [];
         if (firstThreeSlots.length > 0) {
-            extraBtns.push({ text: "Habilitar 3 primeras horas libres", value: "show_slots" });
+            extraBtns.push({ text: "Seleccionar hora disponible", value: "show_slots" });
         }
 
         const choice = await alertWithOptions(
