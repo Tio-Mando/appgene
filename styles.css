@@ -979,3 +979,9 @@ header.top-header {
     animation: pulse-blue 1.5s infinite ease-in-out;
 }
 
+.badge-cancelada {
+    background-color: var(--color-danger) !important;
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+

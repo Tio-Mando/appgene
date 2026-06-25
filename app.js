@@ -13,7 +13,8 @@ let state = {
     currentAppointmentId: null,
     currentDate: new Date(),
     theme: localStorage.getItem('appgene_theme') || 'light',
-    dashboardDeleteMode: false
+    dashboardDeleteMode: false,
+    promptedAppointments: []
 };
 
 // ==========================================================
@@ -316,6 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Auto-refrescar dashboard cada 30 segundos para actualizar el estado de parpadeo de las citas cercanas
     setInterval(renderDashboard, 30000);
+
+    // Monitorear citas entrantes en tiempo real para disparar el recordatorio de inicio
+    setInterval(checkUpcomingAppointments, 15000);
 });
 
 function renderAllViews() {
@@ -1219,14 +1223,23 @@ function renderDashboard() {
         const patient = state.patients.find(p => p.id === app.patient_id);
         const patientName = patient ? patient.name : 'Desconocido';
         
-        // Formatear el badge del tipo de cita y si fue realizada
-        const baseType = app.type.replace('_completed', '');
-        const typeLabel = baseType === 'cirugia' ? 'Cirugía' : baseType === 'consulta' ? 'Consulta' : 'Control';
+        // Formatear el badge del tipo de cita y si fue realizada/cancelada
+        const isCancelled = app.type === 'cancelada';
         const isCompleted = app.type.endsWith('_completed');
-        const typeBadge = `<span class="badge-event badge-${baseType}${isCompleted ? '_completed' : ''}" style="display:inline-block; padding: 4px 8px;">${typeLabel}${isCompleted ? ' (Realizada)' : ''}</span>`;
+        const baseType = app.type.replace('_completed', '');
+        
+        let typeLabel = baseType === 'cirugia' ? 'Cirugía' : baseType === 'consulta' ? 'Consulta' : 'Control';
+        let typeBadge = '';
+        if (isCancelled) {
+            typeBadge = `<span class="badge-event" style="display:inline-block; padding: 4px 8px; background-color: #ef4444; color: white;">Cancelada</span>`;
+        } else {
+            typeBadge = `<span class="badge-event badge-${baseType}${isCompleted ? '_completed' : ''}" style="display:inline-block; padding: 4px 8px;">${typeLabel}${isCompleted ? ' (Realizada)' : ''}</span>`;
+        }
         
         let actionButton = 'N/A';
-        if (baseType !== 'cirugia') {
+        if (isCancelled) {
+            actionButton = `<span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Cancelada</span>`;
+        } else if (baseType !== 'cirugia') {
             if (isCompleted) {
                 actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem; background: #64748b; box-shadow: 0 4px 10px rgba(100, 116, 139, 0.2);" onclick="openClinicalHistory('${app.patient_id}')">Chequear Consulta</button>`;
             } else {
@@ -1234,9 +1247,9 @@ function renderDashboard() {
             }
         }
 
-        // Parpadeo de color azul claro si faltan menos de 20 minutos (o ya comenzó/pasó) y no está realizada
+        // Parpadeo de color azul claro si faltan menos de 20 minutos (o ya comenzó/pasó) y no está realizada/cancelada
         let rowClass = "";
-        if (!isCompleted) {
+        if (!isCompleted && !isCancelled) {
             const now = new Date();
             const nowMinutes = now.getHours() * 60 + now.getMinutes();
             const startMinutes = timeToMinutes(app.start_time);
@@ -1254,8 +1267,10 @@ function renderDashboard() {
 
         const rowClickAction = state.dashboardDeleteMode ? `onclick="toggleRowCheckbox(event, 'chk-${app.id}')" style="cursor: pointer;"` : 'style="cursor: context-menu;"';
 
+        const rowOpacity = isCancelled ? 'opacity: 0.5;' : '';
+
         return `
-            <tr ${rowClass} ${rowClickAction} oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')" style="border-bottom: 1px solid var(--border-color);">
+            <tr ${rowClass} ${rowClickAction} oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')" style="border-bottom: 1px solid var(--border-color); ${rowOpacity}">
                 ${checkboxCell}
                 <td style="padding: 16px; font-weight:600;">${app.start_time} - ${app.end_time}</td>
                 <td style="padding: 16px;">${patientName}</td>
@@ -1415,5 +1430,127 @@ function toggleRowCheckbox(event, checkboxId) {
     const cb = document.getElementById(checkboxId);
     if (cb) {
         cb.checked = !cb.checked;
+    }
+}
+
+window.promptReasons = function(title, message, options) {
+    const modal = document.getElementById('modal-confirm');
+    const titleEl = document.getElementById('confirm-title');
+    const messageEl = document.getElementById('confirm-message');
+    const btnCancel = document.getElementById('btn-confirm-cancel');
+    const btnAccept = document.getElementById('btn-confirm-accept');
+    const iconContainer = document.getElementById('confirm-icon-container');
+    const optionsContainer = document.getElementById('confirm-options-container');
+
+    if (!modal) return Promise.resolve(null);
+
+    iconContainer.innerHTML = `<i data-lucide="help-circle" style="width: 48px; height: 48px; stroke-width: 1.5;"></i>`;
+    iconContainer.style.color = "var(--color-warning)";
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    messageEl.style.whiteSpace = 'pre-wrap';
+    messageEl.style.textAlign = 'center';
+
+    optionsContainer.innerHTML = options.map((opt, index) => {
+        return `<button class="btn-primary" style="background: var(--color-primary); color: white; padding: 10px; width: 100%; border-radius: var(--radius-sm); border: none; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; margin-bottom: 5px;" data-opt-index="${index}">${opt.text}</button>`;
+    }).join('');
+    optionsContainer.style.display = 'flex';
+
+    btnCancel.style.display = 'inline-block';
+    btnCancel.textContent = "Volver";
+    btnAccept.style.display = 'none';
+
+    modal.style.display = 'flex';
+    lucide.createIcons();
+
+    return new Promise((resolve) => {
+        const buttons = optionsContainer.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.onclick = () => {
+                const idx = parseInt(btn.getAttribute('data-opt-index'));
+                modal.style.display = 'none';
+                optionsContainer.style.display = 'none';
+                optionsContainer.innerHTML = '';
+                resolve(options[idx].value);
+            };
+        });
+
+        btnCancel.onclick = () => {
+            modal.style.display = 'none';
+            optionsContainer.style.display = 'none';
+            optionsContainer.innerHTML = '';
+            resolve(null);
+        };
+    });
+};
+
+function checkUpcomingAppointments() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const currentHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // Evitar interrumpir si hay otro modal abierto en pantalla
+    const modalConfirm = document.getElementById('modal-confirm');
+    if (modalConfirm && modalConfirm.style.display === 'flex') return;
+
+    for (let app of state.appointments) {
+        if (app.date === todayStr && !app.type.endsWith('_completed') && app.type !== 'cancelada' && app.type !== 'cirugia') {
+            const startMins = timeToMinutes(app.start_time);
+            const nowMins = now.getHours() * 60 + now.getMinutes();
+            // Disparar exactamente en el minuto que debe iniciar la cita
+            if (nowMins === startMins && !state.promptedAppointments.includes(app.id)) {
+                state.promptedAppointments.push(app.id);
+                promptStartAppointment(app);
+                break;
+            }
+        }
+    }
+}
+
+async function promptStartAppointment(app) {
+    const patient = state.patients.find(p => p.id === app.patient_id);
+    const patientName = patient ? patient.name : 'Paciente';
+    
+    const start = await confirm(
+        `Es hora de iniciar la cita de las ${app.start_time} para ${patientName}. ¿Deseas comenzar la consulta?`, 
+        "Cita Programada"
+    );
+    
+    if (start) {
+        openNewConsultationDirectly(app.patient_id, app.id);
+    } else {
+        const reason = await promptReasons(
+            "Cita Pospuesta / Cancelada",
+            "Selecciona la razón por la que no se inicia la cita a la hora:",
+            [
+                { text: "El paciente está retrasado", value: "delayed" },
+                { text: "La doctora está ocupada / retrasada", value: "doctor_busy" },
+                { text: "El cliente canceló la cita", value: "cancelled" },
+                { text: "Otro motivo", value: "other" }
+            ]
+        );
+        
+        if (reason === 'cancelled') {
+            try {
+                const { error } = await supabaseClient
+                    .from('appointments')
+                    .update({ type: 'cancelada' })
+                    .eq('id', app.id);
+                
+                if (error) throw error;
+                
+                const appIndex = state.appointments.findIndex(a => a.id === app.id);
+                if (appIndex !== -1) {
+                    state.appointments[appIndex].type = 'cancelada';
+                }
+                
+                renderDashboard();
+                renderCalendar();
+                alert("La cita ha sido marcada como cancelada y se mostrará con opacidad del 50%.", "Cita Cancelada");
+            } catch (err) {
+                console.error("Error al cancelar la cita:", err);
+                alert("Error al intentar cancelar la cita en el servidor.");
+            }
+        }
     }
 }
