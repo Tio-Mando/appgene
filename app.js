@@ -308,7 +308,6 @@ function openNewPatientModal() {
 
 function openNewAppointmentModal() {
     document.getElementById('form-new-appointment').reset();
-    document.getElementById('scheduler-alert').style.display = 'none';
     populatePatientSelect();
     document.getElementById('modal-appointment').style.display = 'flex';
 }
@@ -464,8 +463,15 @@ async function saveAppointment(e) {
     const endTime = document.getElementById('app-end-time').value;
 
     if (checkCollision(date, startTime, endTime)) {
-        document.getElementById('scheduler-alert').style.display = 'block';
+        await alert("El horario seleccionado se solapa con una Cirugía u otra cita programada.", "Conflicto de Horario");
         return;
+    }
+
+    // Verificar si el paciente ya tiene otra cita ese mismo día
+    const existingApp = state.appointments.find(app => app.patient_id === patientId && app.date === date);
+    if (existingApp) {
+        const confirmDuplicate = await confirm(`Este cliente tuvo una cita hoy a las ${existingApp.start_time}. ¿Seguro deseas crear otra cita para hoy?`, "Cita Duplicada");
+        if (!confirmDuplicate) return;
     }
 
     const newApp = {
