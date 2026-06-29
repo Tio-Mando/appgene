@@ -1,7 +1,7 @@
 // ==========================================================
 // SUPABASE CLIENT INITIALIZATION & CREDENTIALS
 // ==========================================================
-const supabaseUrl = 'https://faxxecwhbhmlxbcxurxl.supabase.co';
+const supabaseUrl = 'https://faxxeewhbhmlxbckurxl.supabase.co';
 const supabaseKey = 'sb_publishable_eH569-f672z_FhbDMqC_QA_h7FLBTuI';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
