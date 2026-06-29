@@ -779,7 +779,11 @@ header.top-header {
     
     /* Ocultar el perfil duplicado en el header para móviles */
     header.top-header .doctor-profile {
-        display: none;
+        display: none !important;
+    }
+
+    .hide-on-mobile {
+        display: none !important;
     }
 
     .search-bar {
@@ -794,7 +798,7 @@ header.top-header {
 
     /* Dashboard Widgets adaptados */
     .dashboard-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr !important;
         gap: 1rem;
         width: 100% !important;
         box-sizing: border-box;
