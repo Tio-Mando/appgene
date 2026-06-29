@@ -1011,6 +1011,40 @@ function openClinicalHistory(patientId) {
     if (!patient) return;
 
     document.getElementById('ch-patient-title').textContent = `Historia Clínica - ${patient.name}`;
+    
+    // Rellenar información demográfica del paciente
+    const pIdEl = document.getElementById('ch-p-id');
+    const pPhoneEl = document.getElementById('ch-p-phone');
+    const pBirthEl = document.getElementById('ch-p-birth');
+    
+    if (pIdEl) pIdEl.textContent = patient.id;
+    if (pPhoneEl) pPhoneEl.textContent = patient.phone || 'No registrado';
+    if (pBirthEl) pBirthEl.textContent = patient.birth_date || 'No registrada';
+
+    // Rellenar próxima cita o cirugía programada
+    const nextAppEl = document.getElementById('ch-p-next-app');
+    if (nextAppEl) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const patientApps = state.appointments.filter(app => app.patient_id === patientId && app.type !== 'cancelada');
+        patientApps.sort((a,b) => `${a.date}T${a.start_time}`.localeCompare(`${b.date}T${b.end_time}`));
+        const futureApp = patientApps.find(app => {
+            const appDateTime = new Date(`${app.date}T${app.start_time}`);
+            return appDateTime >= new Date() || app.date === todayStr;
+        });
+
+        if (futureApp) {
+            const typeLabel = futureApp.type === 'cirugia' ? 'Cirugía' : 'Consulta';
+            const startTimeFormatted = futureApp.start_time ? futureApp.start_time.substring(0, 5) : '';
+            nextAppEl.textContent = `${futureApp.date} a las ${startTimeFormatted} (${typeLabel})`;
+            nextAppEl.style.color = 'var(--color-primary)';
+            nextAppEl.style.fontWeight = '600';
+        } else {
+            nextAppEl.textContent = 'Ninguna programada';
+            nextAppEl.style.color = 'var(--text-muted)';
+            nextAppEl.style.fontWeight = 'normal';
+        }
+    }
+
     document.getElementById('form-new-consultation').reset();
     
     renderTimeline(patient);
@@ -2162,13 +2196,14 @@ function toggleNotificationsPanel(event) {
     }
 }
 
-function addNotification(title, message, type = 'info') {
+function addNotification(title, message, type = 'info', metadata = null) {
     // Estilo móvil centrado absoluto y desktop a la derecha
     const notif = {
         id: Date.now(),
         title,
         message,
         type,
+        metadata,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -2208,8 +2243,12 @@ function renderNotifications() {
         if (n.type === 'warning') { icon = 'alert-triangle'; color = 'var(--color-warning)'; }
         if (n.type === 'success') { icon = 'check-circle'; color = 'var(--color-success)'; }
 
+        const patientId = n.metadata ? n.metadata.patientId : '';
+        const clickHandler = patientId ? `onclick="handleNotificationClick('${patientId}', event)"` : '';
+        const itemClass = patientId ? 'class="notification-item" style="cursor: pointer; display: flex; gap: 10px; padding: 10px; border-bottom: 1px solid var(--border-color); align-items: flex-start; text-align: left;"' : 'style="display: flex; gap: 10px; padding: 10px; border-bottom: 1px solid var(--border-color); align-items: flex-start; text-align: left;"';
+
         return `
-            <div style="display: flex; gap: 10px; padding: 10px; border-bottom: 1px solid var(--border-color); align-items: flex-start; text-align: left;">
+            <div ${clickHandler} ${itemClass}>
                 <i data-lucide="${icon}" style="width: 18px; height: 18px; color: ${color}; flex-shrink: 0; margin-top: 2px;"></i>
                 <div style="flex-grow: 1;">
                     <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">${n.title}</div>
@@ -2225,6 +2264,17 @@ function renderNotifications() {
 function clearNotifications() {
     state.notifications = [];
     renderNotifications();
+}
+
+function handleNotificationClick(patientId, event) {
+    if (event) event.stopPropagation();
+    
+    // Cerrar el panel de notificaciones
+    const panel = document.getElementById('notifications-panel');
+    if (panel) panel.style.display = 'none';
+
+    // Abrir historia clínica
+    openClinicalHistory(patientId);
 }
 
 // Toast flotante tipo teléfono móvil/escritorio
@@ -2323,7 +2373,7 @@ async function checkRealtimeNotifications() {
                 const sortedPatients = [...state.patients].sort((a,b) => b.id.localeCompare(a.id)); // o por fecha si existiera
                 const newestPatient = sortedPatients[0];
                 if (newestPatient) {
-                    addNotification("Nuevo Paciente Registrado", `El paciente ${newestPatient.name} se registró mediante un enlace de cita.`, "success");
+                    addNotification("Nuevo Paciente Registrado", `El paciente ${newestPatient.name} se registró mediante un enlace de cita.`, "success", { patientId: newestPatient.id });
                 }
             }
             lastPatientsCount = count;
@@ -2354,7 +2404,8 @@ async function checkRealtimeNotifications() {
                 addNotification(
                     "Cita Próxima (En 5 Minutos)",
                     `La ${label} de ${name} está programada para iniciar a las ${app.start_time.substring(0, 5)}.`,
-                    "warning"
+                    "warning",
+                    { patientId: app.patient_id }
                 );
             }
         }
@@ -2391,3 +2442,4 @@ window.toggleNotificationsPanel = toggleNotificationsPanel;
 window.clearNotifications = clearNotifications;
 window.toggleSelectAllDashboard = toggleSelectAllDashboard;
 window.updateSelectAllState = updateSelectAllState;
+window.handleNotificationClick = handleNotificationClick;
