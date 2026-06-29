@@ -2299,3 +2299,16 @@ document.addEventListener('click', (e) => {
         panel.style.display = 'none';
     }
 });
+
+// Exponer funciones globales al objeto Window para evitar errores de compilación/ejecución
+window.toggleAuthView = toggleAuthView;
+window.loginWithEmail = loginWithEmail;
+window.registerWithEmail = registerWithEmail;
+window.switchPage = switchPage;
+window.toggleTheme = toggleTheme;
+window.logout = logout;
+window.saveClinicSettings = saveClinicSettings;
+window.generateAppointmentLink = generateAppointmentLink;
+window.copySharedLink = copySharedLink;
+window.toggleNotificationsPanel = toggleNotificationsPanel;
+window.clearNotifications = clearNotifications;
