@@ -10,16 +10,44 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-    <div class="app-container">
+    <!-- PANTALLA DE INICIO DE SESIÓN PREMIUM (Google OAuth) -->
+    <div id="login-container" style="display: flex; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--bg-app); justify-content: center; align-items: center; z-index: 100000; transition: var(--transition-smooth); flex-direction: column; padding: 2rem;">
+        <div class="card" style="max-width: 420px; width: 100%; padding: 2.5rem; text-align: center; display: flex; flex-direction: column; gap: 1.5rem; box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); background-color: var(--bg-surface);">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 1rem;">
+                <div class="logo-icon" style="width: 48px; height: 48px; font-size: 1.4rem;">AG</div>
+                <span class="logo-text" style="font-size: 1.8rem;">appgene</span>
+            </div>
+            
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.6rem; color: var(--text-primary); font-weight: 700; margin-bottom: 0.5rem;">Bienvenido de nuevo</h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">Gestión médica inteligente. Ingresa con tu cuenta de Google autorizada para acceder al panel clínico.</p>
+            
+            <button class="btn-primary" onclick="loginWithGoogle()" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 12px; padding: 14px; font-size: 1rem; border-radius: var(--radius-md); background: #ffffff !important; border: 1px solid var(--border-color) !important; color: #0f172a !important; box-shadow: var(--shadow-sm) !important; font-weight: 600;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Iniciar sesión con Google
+            </button>
+        </div>
+    </div>
+
+    <div class="app-container" id="app-wrapper" style="display: none; width: 100%; min-height: 100vh;">
         <!-- HEADER EXCLUSIVO MÓVIL (Solo visible en pantallas pequeñas) -->
         <header class="mobile-top-bar">
             <div class="logo-section" style="display: flex; align-items: center; gap: 10px;">
                 <div class="logo-icon">AG</div>
                 <span class="logo-text">appgene</span>
             </div>
-            <button class="btn-theme-mobile" onclick="toggleTheme()">
-                <i id="theme-icon-mobile" data-lucide="moon"></i>
-            </button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn-theme-mobile" onclick="toggleTheme()">
+                    <i id="theme-icon-mobile" data-lucide="moon"></i>
+                </button>
+                <button class="btn-theme-mobile" onclick="logout()" title="Cerrar sesión" style="border-color: var(--color-danger-light) !important;">
+                    <i data-lucide="log-out" style="color: var(--color-danger); width: 18px; height: 18px;"></i>
+                </button>
+            </div>
         </header>
 
         <!-- BARRA LATERAL (SIDEBAR DE ESCRITORIO - Se oculta en mobile) -->
@@ -71,12 +99,17 @@
                     <i class="search-icon" data-lucide="search"></i>
                     <input type="text" id="global-search" placeholder="Buscar paciente por nombre o ID..." oninput="handleGlobalSearch()">
                 </div>
-                <div class="doctor-profile">
-                    <div class="doctor-avatar">Dr</div>
-                    <div class="doctor-info">
-                        <div class="doctor-name">Dra. Especialista</div>
-                        <div class="doctor-specialty">Oftalmología General</div>
+                <div class="doctor-profile" style="display: flex; align-items: center; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="doctor-avatar">Dr</div>
+                        <div class="doctor-info">
+                            <div class="doctor-name">Dra. Especialista</div>
+                            <div class="doctor-specialty">Oftalmología General</div>
+                        </div>
                     </div>
+                    <button onclick="logout()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; padding: 4px; transition: var(--transition-smooth); border-radius: var(--radius-sm);" title="Cerrar sesión">
+                        <i data-lucide="log-out" style="width: 18px; height: 18px; color: var(--color-danger);"></i>
+                    </button>
                 </div>
             </header>
 
@@ -428,6 +461,8 @@
             <span>Agenda</span>
         </a>
     </nav>
+
+    </div>
 
     <!-- MENÚ CONTEXTUAL PERSONALIZADO (CLICK DERECHO EN CITAS) -->
     <div id="custom-context-menu" class="context-menu" style="display: none; position: fixed; z-index: 10000; background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); min-width: 150px; overflow: hidden; padding: 4px 0;">

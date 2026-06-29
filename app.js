@@ -14,7 +14,8 @@ let state = {
     currentDate: new Date(),
     theme: localStorage.getItem('appgene_theme') || 'light',
     dashboardDeleteMode: false,
-    promptedAppointments: []
+    promptedAppointments: [],
+    user: null
 };
 
 // ==========================================================
@@ -265,7 +266,7 @@ function validateForm(formId) {
 // ==========================================================
 // INITIALIZATION
 // ==========================================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Aplicar tema guardado
     document.documentElement.setAttribute('data-theme', state.theme);
     updateThemeUI();
@@ -273,19 +274,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Lucide Icons init
     lucide.createIcons();
 
-    // Renderizar vistas con estado vacío inicialmente para que los botones respondan
-    renderAllViews();
+    // Validar sesión del usuario al cargar la página
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    handleAuthChange(session);
 
-    // Cargar pacientes y citas desde Supabase de forma asíncrona sin bloquear la UI
-    refreshStateFromSupabase().then(async () => {
-        // Rellenar datos de prueba si la base de datos remota está vacía
-        if (state.patients.length === 0) {
-            await loadMockData();
-        } else {
-            renderAllViews();
-        }
-    }).catch(err => {
-        console.error("Error inicial al obtener datos de Supabase:", err);
+    // Escuchar cambios de autenticación
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+        handleAuthChange(session);
     });
 
     // Escuchar clics globales para cerrar el menú contextual personalizado
@@ -327,6 +322,73 @@ function renderAllViews() {
     renderPatients();
     renderCalendar();
     populatePatientSelect();
+}
+
+async function handleAuthChange(session) {
+    const loginContainer = document.getElementById('login-container');
+    const appWrapper = document.getElementById('app-wrapper');
+
+    if (session) {
+        state.user = session.user;
+        
+        // Esconder pantalla de login y mostrar app
+        if (loginContainer) loginContainer.style.display = 'none';
+        if (appWrapper) appWrapper.style.display = 'flex';
+
+        // Actualizar datos del perfil de la doctora
+        const doctorNameElements = document.querySelectorAll('.doctor-name');
+        const doctorAvatarElements = document.querySelectorAll('.doctor-avatar');
+        const displayName = state.user.user_metadata?.full_name || state.user.email;
+        
+        doctorNameElements.forEach(el => el.textContent = displayName);
+        doctorAvatarElements.forEach(el => {
+            el.textContent = displayName.substring(0, 2).toUpperCase();
+            if (state.user.user_metadata?.avatar_url) {
+                el.innerHTML = `<img src="${state.user.user_metadata.avatar_url}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            }
+        });
+
+        // Cargar datos del usuario autenticado
+        await refreshStateFromSupabase();
+        
+        // Rellenar datos de prueba si la base de datos remota está vacía
+        if (state.patients.length === 0) {
+            await loadMockData();
+        } else {
+            renderAllViews();
+        }
+    } else {
+        state.user = null;
+        if (loginContainer) loginContainer.style.display = 'flex';
+        if (appWrapper) appWrapper.style.display = 'none';
+    }
+}
+
+async function loginWithGoogle() {
+    try {
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin
+            }
+        });
+        if (error) throw error;
+    } catch (err) {
+        console.error("Error al iniciar sesión con Google:", err);
+        alert("Ocurrió un error al intentar autenticarte con Google.");
+    }
+}
+
+async function logout() {
+    const confirmLogout = await confirm("¿Estás seguro de que deseas cerrar sesión?");
+    if (!confirmLogout) return;
+    
+    try {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) throw error;
+    } catch (err) {
+        console.error("Error al cerrar sesión:", err);
+    }
 }
 
 // Fetch all database records from Supabase cloud
