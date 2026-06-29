@@ -1806,9 +1806,6 @@ async function cancelAppointmentFromConsultationForm() {
     if (appIndex !== -1) {
         state.appointments[appIndex].type = 'cancelada';
     }
-    
-    }
-    
     closeModal('modal-new-consultation');
     renderDashboard();
     renderCalendar();
