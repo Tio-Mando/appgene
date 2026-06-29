@@ -2201,48 +2201,64 @@ function openPublicPatientRegistrationModal(linkData, doctorSocialLink) {
             if (successAppDate) successAppDate.textContent = capitalizedDate;
             if (successAppTime) successAppTime.textContent = `${startTimeFormatted} - ${endTimeFormatted}`;
 
-            // Configurar botón de redes sociales de la doctora
-            const socialFollowContainer = document.getElementById('social-follow-container');
-            const btnFollowSocial = document.getElementById('btn-follow-social');
-            const socialIcon = document.getElementById('social-icon');
-            const socialText = document.getElementById('social-text');
+            // Configurar botón de acción único
+            const btnSuccessAction = document.getElementById('btn-success-action');
+            const successActionIcon = document.getElementById('success-action-icon');
+            const successActionText = document.getElementById('success-action-text');
+            const socialInviteText = document.getElementById('social-invite-text');
 
-            if (doctorSocialLink && socialFollowContainer && btnFollowSocial) {
-                btnFollowSocial.href = doctorSocialLink;
-                let iconName = 'external-link';
-                let textValue = '¡Visitar mis Redes Sociales!';
-                let btnBackground = 'var(--color-primary)';
-                
-                const urlLower = doctorSocialLink.toLowerCase();
-                if (urlLower.includes('instagram.com')) {
-                    iconName = 'instagram';
-                    textValue = '¡Sígueme en Instagram!';
-                    btnBackground = 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)';
-                } else if (urlLower.includes('facebook.com') || urlLower.includes('fb.com')) {
-                    iconName = 'facebook';
-                    textValue = '¡Sígueme en Facebook!';
-                    btnBackground = '#1877f2';
-                } else if (urlLower.includes('twitter.com') || urlLower.includes('x.com')) {
-                    iconName = 'twitter';
-                    textValue = '¡Sígueme en X (Twitter)!';
-                    btnBackground = '#000000';
-                } else if (urlLower.includes('tiktok.com')) {
-                    iconName = 'video';
-                    textValue = '¡Sígueme en TikTok!';
-                    btnBackground = '#010101';
-                } else if (urlLower.includes('youtube.com')) {
-                    iconName = 'youtube';
-                    textValue = '¡Suscríbete en YouTube!';
-                    btnBackground = '#ff0000';
+            if (btnSuccessAction) {
+                if (doctorSocialLink) {
+                    let iconName = 'external-link';
+                    let textValue = '¡Visitar mis Redes Sociales!';
+                    let btnBackground = 'var(--color-primary)';
+                    
+                    const urlLower = doctorSocialLink.toLowerCase();
+                    if (urlLower.includes('instagram.com')) {
+                        iconName = 'instagram';
+                        textValue = '¡Sígueme en Instagram!';
+                        btnBackground = 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)';
+                    } else if (urlLower.includes('facebook.com') || urlLower.includes('fb.com')) {
+                        iconName = 'facebook';
+                        textValue = '¡Sígueme en Facebook!';
+                        btnBackground = '#1877f2';
+                    } else if (urlLower.includes('twitter.com') || urlLower.includes('x.com')) {
+                        iconName = 'twitter';
+                        textValue = '¡Sígueme en X (Twitter)!';
+                        btnBackground = '#000000';
+                    } else if (urlLower.includes('tiktok.com')) {
+                        iconName = 'video';
+                        textValue = '¡Sígueme en TikTok!';
+                        btnBackground = '#010101';
+                    } else if (urlLower.includes('youtube.com')) {
+                        iconName = 'youtube';
+                        textValue = '¡Suscríbete en YouTube!';
+                        btnBackground = '#ff0000';
+                    }
+                    
+                    if (successActionIcon) successActionIcon.setAttribute('data-lucide', iconName);
+                    if (successActionText) successActionText.textContent = textValue;
+                    btnSuccessAction.style.background = btnBackground;
+                    btnSuccessAction.style.border = 'none';
+                    btnSuccessAction.style.color = 'white';
+                    if (socialInviteText) socialInviteText.style.display = 'block';
+
+                    btnSuccessAction.onclick = () => {
+                        window.open(doctorSocialLink, '_blank');
+                        window.location.reload();
+                    };
+                } else {
+                    if (successActionIcon) successActionIcon.setAttribute('data-lucide', 'check-circle');
+                    if (successActionText) successActionText.textContent = 'Entendido';
+                    btnSuccessAction.style.background = 'var(--color-primary)';
+                    btnSuccessAction.style.border = 'none';
+                    btnSuccessAction.style.color = 'white';
+                    if (socialInviteText) socialInviteText.style.display = 'none';
+
+                    btnSuccessAction.onclick = () => {
+                        window.location.reload();
+                    };
                 }
-                
-                if (socialIcon) socialIcon.setAttribute('data-lucide', iconName);
-                if (socialText) socialText.textContent = textValue;
-                btnFollowSocial.style.background = btnBackground;
-                
-                socialFollowContainer.style.display = 'flex';
-            } else if (socialFollowContainer) {
-                socialFollowContainer.style.display = 'none';
             }
 
             // Ocultar formulario de paciente y mostrar pantalla de éxito
