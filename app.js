@@ -1458,7 +1458,7 @@ function renderDashboard() {
 
         const checkboxCell = state.dashboardDeleteMode ? `
             <td style="padding: 16px; text-align: center;">
-                <input type="checkbox" class="delete-app-checkbox" value="${app.id}" id="chk-${app.id}" style="width: 18px; height: 18px; cursor: pointer;" onclick="event.stopPropagation();">
+                <input type="checkbox" class="delete-app-checkbox" value="${app.id}" id="chk-${app.id}" style="width: 18px; height: 18px; cursor: pointer;" onclick="event.stopPropagation(); updateSelectAllState();">
             </td>
         ` : '';
 
@@ -1642,6 +1642,10 @@ function handleGlobalSearch() {
 function enterDashboardDeleteMode() {
     state.dashboardDeleteMode = true;
     document.getElementById('btn-dashboard-trash').style.display = 'none';
+    const selectAllContainer = document.getElementById('switch-select-all-container');
+    const selectAllCheckbox = document.getElementById('chk-select-all');
+    if (selectAllContainer) selectAllContainer.style.display = 'inline-flex';
+    if (selectAllCheckbox) selectAllCheckbox.checked = false;
     document.getElementById('btn-dashboard-delete-confirm').style.display = 'inline-block';
     document.getElementById('btn-dashboard-delete-cancel').style.display = 'inline-block';
     renderDashboard();
@@ -1651,9 +1655,29 @@ function enterDashboardDeleteMode() {
 function exitDashboardDeleteMode() {
     state.dashboardDeleteMode = false;
     document.getElementById('btn-dashboard-trash').style.display = 'inline-flex';
+    const selectAllContainer = document.getElementById('switch-select-all-container');
+    const selectAllCheckbox = document.getElementById('chk-select-all');
+    if (selectAllContainer) selectAllContainer.style.display = 'none';
+    if (selectAllCheckbox) selectAllCheckbox.checked = false;
     document.getElementById('btn-dashboard-delete-confirm').style.display = 'none';
     document.getElementById('btn-dashboard-delete-cancel').style.display = 'none';
     renderDashboard();
+}
+
+function toggleSelectAllDashboard(checkbox) {
+    const checkboxes = document.querySelectorAll('.delete-app-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+}
+
+function updateSelectAllState() {
+    const allCheckboxes = document.querySelectorAll('.delete-app-checkbox');
+    const checkedCheckboxes = document.querySelectorAll('.delete-app-checkbox:checked');
+    const selectAllCheckbox = document.getElementById('chk-select-all');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+    }
 }
 
 async function confirmDashboardDelete() {
@@ -1689,6 +1713,7 @@ function toggleRowCheckbox(event, checkboxId) {
     const cb = document.getElementById(checkboxId);
     if (cb) {
         cb.checked = !cb.checked;
+        updateSelectAllState();
     }
 }
 
@@ -2328,3 +2353,5 @@ window.generateAppointmentLink = generateAppointmentLink;
 window.copySharedLink = copySharedLink;
 window.toggleNotificationsPanel = toggleNotificationsPanel;
 window.clearNotifications = clearNotifications;
+window.toggleSelectAllDashboard = toggleSelectAllDashboard;
+window.updateSelectAllState = updateSelectAllState;
