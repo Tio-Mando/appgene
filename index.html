@@ -94,6 +94,38 @@
                 ¿Ya tienes una cuenta? <a href="#" onclick="toggleAuthView('login')" style="color: var(--color-primary); text-decoration: none; font-weight: 600;">Iniciar Sesión</a>
             </p>
         </div>
+
+        <!-- VISTA DE REGISTRO DE PACIENTE (PÚBLICA PARA LINKS DE CITA) -->
+        <div id="auth-patient-view" class="card" style="max-width: 480px; width: 100%; padding: 2.5rem; text-align: center; display: none; flex-direction: column; gap: 1.2rem; box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); background-color: var(--bg-surface);">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 0.5rem;">
+                <div class="logo-icon" style="width: 48px; height: 48px; font-size: 1.4rem;">AG</div>
+                <span class="logo-text" style="font-size: 1.8rem;">appgene</span>
+            </div>
+            
+            <h2 id="patient-view-title" style="font-family: 'Outfit', sans-serif; font-size: 1.4rem; color: var(--text-primary); font-weight: 700;">Reservar mi Cita Médica</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.4; margin-bottom: 0.5rem;">Por favor, ingresa tus datos a continuación para confirmar tu cita con la doctora.</p>
+            
+            <form id="form-public-patient" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 1rem; text-align: left;" novalidate>
+                <div class="form-group">
+                    <label for="pub-p-id">Identificación / Cédula</label>
+                    <input type="text" id="pub-p-id" required style="width: 100%;">
+                </div>
+                <div class="form-group">
+                    <label for="pub-p-name">Nombre Completo</label>
+                    <input type="text" id="pub-p-name" required style="width: 100%;">
+                </div>
+                <div class="form-group">
+                    <label for="pub-p-phone">Teléfono (WhatsApp)</label>
+                    <input type="tel" id="pub-p-phone" placeholder="Ej: 584120000000" required style="width: 100%;">
+                </div>
+                <div class="form-group">
+                    <label for="pub-p-birth">Fecha de Nacimiento</label>
+                    <input type="date" id="pub-p-birth" required style="width: 100%;">
+                </div>
+                
+                <button type="submit" class="btn-primary" style="width: 100%; display: flex; justify-content: center; align-items: center; padding: 12px; margin-top: 0.5rem; font-weight: 700;">Confirmar y Reservar Cita</button>
+            </form>
+        </div>
     </div>
 
     <div class="app-container" id="app-wrapper" style="display: none; width: 100%; min-height: 100vh;">

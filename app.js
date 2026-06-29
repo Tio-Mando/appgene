@@ -2008,25 +2008,35 @@ async function checkPublicAppointmentLink() {
 }
 
 function openPublicPatientRegistrationModal(linkData) {
-    // Preparar el modal de registro pero para uso público del paciente
-    const modal = document.getElementById('modal-patient');
-    if (!modal) return;
+    // Esconder vistas de la doctora
+    const loginView = document.getElementById('auth-login-view');
+    const registerView = document.getElementById('auth-register-view');
+    if (loginView) loginView.style.display = 'none';
+    if (registerView) registerView.style.display = 'none';
 
-    // Modificar temporalmente títulos y botones del modal
-    const title = modal.querySelector('h3');
-    if (title) title.textContent = `Registra tus datos para la cita de las ${linkData.start_time}`;
+    // Mostrar contenedor de login y la vista de paciente
+    const loginContainer = document.getElementById('login-container');
+    const patientView = document.getElementById('auth-patient-view');
+    if (loginContainer) loginContainer.style.display = 'flex';
+    if (patientView) patientView.style.display = 'flex';
 
-    const form = document.getElementById('form-new-patient');
-    
-    // Cambiar submit handler temporalmente
+    // Actualizar título informativo
+    const title = document.getElementById('patient-view-title');
+    if (title) {
+        title.textContent = `Reservar Cita: ${linkData.date} a las ${linkData.start_time}`;
+    }
+
+    const form = document.getElementById('form-public-patient');
+    if (!form) return;
+
     form.onsubmit = async (e) => {
         e.preventDefault();
-        if (!validateForm('form-new-patient')) return;
+        if (!validateForm('form-public-patient')) return;
 
-        const id = document.getElementById('p-id').value;
-        const name = document.getElementById('p-name').value;
-        const phone = document.getElementById('p-phone').value;
-        const birth_date = document.getElementById('p-birth').value;
+        const id = document.getElementById('pub-p-id').value;
+        const name = document.getElementById('pub-p-name').value;
+        const phone = document.getElementById('pub-p-phone').value;
+        const birth_date = document.getElementById('pub-p-birth').value;
 
         try {
             // 1. Validar e insertar paciente
@@ -2060,17 +2070,15 @@ function openPublicPatientRegistrationModal(linkData) {
 
             alert("¡Tu cita ha sido reservada con éxito! La doctora te espera.", "Cita Confirmada");
             
-            // Cerrar modal y devolver comportamiento original del formulario
-            modal.style.display = 'none';
-            form.onsubmit = savePatient;
-            if (title) title.textContent = "Registrar Nuevo Paciente";
+            // Ocultar vista y redirigir/limpiar
+            if (loginContainer) loginContainer.style.display = 'none';
+            if (patientView) patientView.style.display = 'none';
+            window.location.href = window.location.origin + window.location.pathname;
         } catch (err) {
             console.error("Error al registrar paciente público:", err);
-            alert("Ocurrió un error al agendar tu cita: " + err.message);
+            alert("Ocurrió un error al agendar tu cita: " + (err.message || JSON.stringify(err)));
         }
     };
-
-    modal.style.display = 'flex';
 }
 
 // ==========================================================
