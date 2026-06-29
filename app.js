@@ -364,6 +364,63 @@ async function handleAuthChange(session) {
     }
 }
 
+function toggleAuthView(view) {
+    const loginView = document.getElementById('auth-login-view');
+    const registerView = document.getElementById('auth-register-view');
+    if (view === 'login') {
+        if (loginView) loginView.style.display = 'flex';
+        if (registerView) registerView.style.display = 'none';
+    } else {
+        if (loginView) loginView.style.display = 'none';
+        if (registerView) registerView.style.display = 'flex';
+    }
+}
+
+async function loginWithEmail(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+        });
+        if (error) throw error;
+    } catch (err) {
+        console.error("Error al iniciar sesión con email:", err);
+        alert("Credenciales incorrectas: " + (err.message || JSON.stringify(err)), "Error de Autenticación");
+    }
+}
+
+async function registerWithEmail(e) {
+    e.preventDefault();
+    const name = document.getElementById('register-name').value;
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+
+    try {
+        const { data, error } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    full_name: name
+                }
+            }
+        });
+        if (error) throw error;
+        
+        // Supabase por defecto suele requerir confirmación por correo si está activo.
+        // Si el usuario se crea y la sesión se inicia automáticamente, el onAuthStateChange lo manejará.
+        alert("¡Registro enviado con éxito! Si tienes la confirmación por correo activa, revisa tu bandeja de entrada.", "Registro Exitoso");
+        toggleAuthView('login');
+    } catch (err) {
+        console.error("Error al registrarse:", err);
+        alert("Ocurrió un error al registrar la cuenta: " + (err.message || JSON.stringify(err)), "Error de Registro");
+    }
+}
+
 async function loginWithGoogle() {
     try {
         const { error } = await supabaseClient.auth.signInWithOAuth({
