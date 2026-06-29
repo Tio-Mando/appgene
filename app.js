@@ -496,10 +496,12 @@ async function refreshStateFromSupabase() {
             const inputDocName = document.getElementById('settings-doctor-name');
             const inputAddress = document.getElementById('settings-clinic-address');
             const inputPhone = document.getElementById('settings-owner-phone');
+            const inputSocial = document.getElementById('settings-social-link');
             
             if (inputDocName) inputDocName.value = settingsRes.data.doctor_name;
             if (inputAddress) inputAddress.value = settingsRes.data.clinic_address;
             if (inputPhone) inputPhone.value = settingsRes.data.owner_phone;
+            if (inputSocial) inputSocial.value = settingsRes.data.social_link || '';
 
             // Actualizar la firma de la doctora en pantalla
             const nameEl = document.querySelector('.doctor-name');
@@ -1941,10 +1943,12 @@ function loadClinicSettingsForm() {
     const inputDocName = document.getElementById('settings-doctor-name');
     const inputAddress = document.getElementById('settings-clinic-address');
     const inputPhone = document.getElementById('settings-owner-phone');
+    const inputSocial = document.getElementById('settings-social-link');
     
     if (inputDocName) inputDocName.value = state.clinicSettings.doctor_name || '';
     if (inputAddress) inputAddress.value = state.clinicSettings.clinic_address || '';
     if (inputPhone) inputPhone.value = state.clinicSettings.owner_phone || '';
+    if (inputSocial) inputSocial.value = state.clinicSettings.social_link || '';
 }
 
 async function saveClinicSettings(e) {
@@ -1954,12 +1958,14 @@ async function saveClinicSettings(e) {
     const doctor_name = document.getElementById('settings-doctor-name').value;
     const clinic_address = document.getElementById('settings-clinic-address').value;
     const owner_phone = document.getElementById('settings-owner-phone').value;
+    const social_link = document.getElementById('settings-social-link').value;
 
     const updatedSettings = {
         user_id: state.user.id,
         doctor_name,
         clinic_address,
-        owner_phone
+        owner_phone,
+        social_link
     };
 
     try {
@@ -2059,6 +2065,21 @@ function copySharedLink() {
 
 // Detectar y procesar link público del paciente al cargar
 async function checkPublicAppointmentLink() {
+    const birthInput = document.getElementById('pub-p-birth');
+    if (birthInput) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const maxDate = `${yyyy}-${mm}-${dd}`;
+        
+        const minYear = yyyy - 120;
+        const minDate = `${minYear}-${mm}-${dd}`;
+        
+        birthInput.setAttribute('max', maxDate);
+        birthInput.setAttribute('min', minDate);
+    }
+
     const params = new URLSearchParams(window.location.search);
     const linkId = params.get('linkId');
     if (!linkId) return;
@@ -2084,14 +2105,25 @@ async function checkPublicAppointmentLink() {
             return;
         }
 
+        // Obtener el enlace de la red social de la doctora
+        let doctorSocialLink = '';
+        const { data: settingsData } = await supabaseClient
+            .from('clinic_settings')
+            .select('social_link')
+            .eq('user_id', linkData.created_by)
+            .maybeSingle();
+        if (settingsData) {
+            doctorSocialLink = settingsData.social_link || '';
+        }
+
         // Abrir un modal especial para el paciente (reutilizando modal-patient)
-        openPublicPatientRegistrationModal(linkData);
+        openPublicPatientRegistrationModal(linkData, doctorSocialLink);
     } catch (err) {
         console.error(err);
     }
 }
 
-function openPublicPatientRegistrationModal(linkData) {
+function openPublicPatientRegistrationModal(linkData, doctorSocialLink) {
     // Esconder vistas de la doctora
     const loginView = document.getElementById('auth-login-view');
     const registerView = document.getElementById('auth-register-view');
@@ -2168,6 +2200,50 @@ function openPublicPatientRegistrationModal(linkData) {
             if (successPatName) successPatName.textContent = name;
             if (successAppDate) successAppDate.textContent = capitalizedDate;
             if (successAppTime) successAppTime.textContent = `${startTimeFormatted} - ${endTimeFormatted}`;
+
+            // Configurar botón de redes sociales de la doctora
+            const socialFollowContainer = document.getElementById('social-follow-container');
+            const btnFollowSocial = document.getElementById('btn-follow-social');
+            const socialIcon = document.getElementById('social-icon');
+            const socialText = document.getElementById('social-text');
+
+            if (doctorSocialLink && socialFollowContainer && btnFollowSocial) {
+                btnFollowSocial.href = doctorSocialLink;
+                let iconName = 'external-link';
+                let textValue = '¡Visitar mis Redes Sociales!';
+                let btnBackground = 'var(--color-primary)';
+                
+                const urlLower = doctorSocialLink.toLowerCase();
+                if (urlLower.includes('instagram.com')) {
+                    iconName = 'instagram';
+                    textValue = '¡Sígueme en Instagram!';
+                    btnBackground = 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)';
+                } else if (urlLower.includes('facebook.com') || urlLower.includes('fb.com')) {
+                    iconName = 'facebook';
+                    textValue = '¡Sígueme en Facebook!';
+                    btnBackground = '#1877f2';
+                } else if (urlLower.includes('twitter.com') || urlLower.includes('x.com')) {
+                    iconName = 'twitter';
+                    textValue = '¡Sígueme en X (Twitter)!';
+                    btnBackground = '#000000';
+                } else if (urlLower.includes('tiktok.com')) {
+                    iconName = 'video';
+                    textValue = '¡Sígueme en TikTok!';
+                    btnBackground = '#010101';
+                } else if (urlLower.includes('youtube.com')) {
+                    iconName = 'youtube';
+                    textValue = '¡Suscríbete en YouTube!';
+                    btnBackground = '#ff0000';
+                }
+                
+                if (socialIcon) socialIcon.setAttribute('data-lucide', iconName);
+                if (socialText) socialText.textContent = textValue;
+                btnFollowSocial.style.background = btnBackground;
+                
+                socialFollowContainer.style.display = 'flex';
+            } else if (socialFollowContainer) {
+                socialFollowContainer.style.display = 'none';
+            }
 
             // Ocultar formulario de paciente y mostrar pantalla de éxito
             if (patientView) patientView.style.display = 'none';

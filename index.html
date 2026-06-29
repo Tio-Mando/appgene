@@ -108,15 +108,15 @@
             <form id="form-public-patient" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 1rem; text-align: left;" novalidate>
                 <div class="form-group">
                     <label for="pub-p-id">Identificación / Cédula</label>
-                    <input type="text" id="pub-p-id" required style="width: 100%;">
+                    <input type="text" id="pub-p-id" required style="width: 100%;" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 </div>
                 <div class="form-group">
                     <label for="pub-p-name">Nombre Completo</label>
-                    <input type="text" id="pub-p-name" required style="width: 100%;">
+                    <input type="text" id="pub-p-name" required style="width: 100%;" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '')">
                 </div>
                 <div class="form-group">
                     <label for="pub-p-phone">Teléfono (WhatsApp)</label>
-                    <input type="tel" id="pub-p-phone" placeholder="Ej: 584120000000" required style="width: 100%;">
+                    <input type="tel" id="pub-p-phone" placeholder="Ej: +584120000000" required style="width: 100%;" oninput="this.value = this.value.replace(/[^0-9+]/g, ''); if (this.value.includes('+')) { this.value = '+' + this.value.replace(/\+/g, ''); }">
                 </div>
                 <div class="form-group">
                     <label for="pub-p-birth">Fecha de Nacimiento</label>
@@ -165,8 +165,16 @@
                 </div>
             </div>
 
-            <button onclick="window.location.reload()" class="btn-primary" style="width: 100%; padding: 12px; font-weight: 700; margin-top: 0.5rem; cursor: pointer;">
-                Entendido
+            <div id="social-follow-container" style="display: none; flex-direction: column; gap: 8px; margin-top: 0.5rem;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 4px 0;">¡Te invito a seguirme para más novedades y consejos de salud visual!</p>
+                <a id="btn-follow-social" href="#" target="_blank" class="btn-primary" style="width: 100%; text-decoration: none; display: flex; justify-content: center; align-items: center; padding: 12px; font-weight: 700; background: var(--color-primary); color: white;">
+                    <i id="social-icon" data-lucide="instagram" style="width: 18px; height: 18px; margin-right: 8px;"></i>
+                    <span id="social-text">¡Sígueme en Instagram!</span>
+                </a>
+            </div>
+
+            <button onclick="window.location.reload()" class="btn-primary" id="btn-success-close" style="width: 100%; padding: 12px; font-weight: 700; margin-top: 0.5rem; cursor: pointer; background: none; border: 1px solid var(--border-color); color: var(--text-primary); box-shadow: none;">
+                Entendido / Salir
             </button>
         </div>
     </div>
@@ -423,6 +431,11 @@
                             <label for="settings-owner-phone">Número del Dueño / Contacto del Consultorio</label>
                             <input type="tel" id="settings-owner-phone" required placeholder="Ej: 584120000000">
                             <span style="font-size: 0.8rem; color: var(--text-muted);">Número oficial del consultorio para dudas de pacientes.</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="settings-social-link">Enlace de Red Social (Instagram, Facebook, etc.)</label>
+                            <input type="url" id="settings-social-link" placeholder="Ej: https://instagram.com/tuusuario">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Enlace a donde se redirigirá al paciente luego de agendar su cita para invitarlo a seguirte.</span>
                         </div>
                         
                         <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px;">Guardar Configuración</button>
