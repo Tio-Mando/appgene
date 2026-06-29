@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="styles.css">
     <!-- Iconos Lucide para un aspecto premium e integrado sin dependencias pesadas -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google reCAPTCHA API -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
     <!-- PANTALLA DE INICIO DE SESIÓN Y REGISTRO PREMIUM -->
@@ -32,6 +34,9 @@
                     <label for="login-password">Contraseña</label>
                     <input type="password" id="login-password" required placeholder="••••••••" style="width: 100%;">
                 </div>
+                <!-- Google reCAPTCHA Widget -->
+                <div class="g-recaptcha" data-sitekey="6LdJ1p0qAAAAAOh_JtWpC4oVd44e5xQ1s_G6xI2L" style="margin: 0.5rem 0; display: flex; justify-content: center;"></div>
+                
                 <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 0.5rem;">Iniciar Sesión</button>
             </form>
 
@@ -79,6 +84,9 @@
                     <label for="register-password">Contraseña (Mín. 6 caracteres)</label>
                     <input type="password" id="register-password" required minlength="6" placeholder="••••••••" style="width: 100%;">
                 </div>
+                <!-- Google reCAPTCHA Widget for Register -->
+                <div class="g-recaptcha" data-sitekey="6LdJ1p0qAAAAAOh_JtWpC4oVd44e5xQ1s_G6xI2L" style="margin: 0.5rem 0; display: flex; justify-content: center;"></div>
+                
                 <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 0.5rem;">Registrarme</button>
             </form>
 
@@ -98,6 +106,10 @@
             <div style="display: flex; gap: 8px; align-items: center;">
                 <button class="btn-theme-mobile" onclick="toggleTheme()">
                     <i id="theme-icon-mobile" data-lucide="moon"></i>
+                </button>
+                <button class="btn-theme-mobile" onclick="toggleNotificationsPanel(event)" title="Notificaciones" style="position: relative;">
+                    <i data-lucide="bell" style="width: 18px; height: 18px;"></i>
+                    <span id="notification-badge-mobile" style="display: none; position: absolute; top: -2px; right: -2px; background: var(--color-danger); color: white; border-radius: 50%; font-size: 0.6rem; font-weight: 700; width: 14px; height: 14px; align-items: center; justify-content: center;">0</span>
                 </button>
                 <button class="btn-theme-mobile" onclick="logout()" title="Cerrar sesión" style="border-color: var(--color-danger-light) !important;">
                     <i data-lucide="log-out" style="color: var(--color-danger); width: 18px; height: 18px;"></i>
@@ -135,6 +147,18 @@
                                 <span>Agenda</span>
                             </a>
                         </li>
+                        <li class="nav-item" id="nav-settings">
+                            <a href="#" onclick="switchPage('settings')">
+                                <i data-lucide="settings"></i>
+                                <span>Consultorio</span>
+                            </a>
+                        </li>
+                        <li class="nav-item" id="nav-linkgen">
+                            <a href="#" onclick="switchPage('linkgen')">
+                                <i data-lucide="link-2"></i>
+                                <span>Link de Cita</span>
+                            </a>
+                        </li>
                     </ul>
                 </nav>
             </div>
@@ -162,6 +186,25 @@
                             <div class="doctor-specialty">Oftalmología General</div>
                         </div>
                     </div>
+                    <!-- Botón e Historial de Notificaciones -->
+                    <div style="position: relative;">
+                        <button onclick="toggleNotificationsPanel(event)" style="background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; padding: 6px; position: relative; border-radius: 50%;" title="Notificaciones">
+                            <i data-lucide="bell" style="width: 20px; height: 20px;"></i>
+                            <span id="notification-badge" style="display: none; position: absolute; top: -2px; right: -2px; background: var(--color-danger); color: white; border-radius: 50%; font-size: 0.7rem; font-weight: 700; width: 16px; height: 16px; align-items: center; justify-content: center;">0</span>
+                        </button>
+                        
+                        <!-- Panel de Notificaciones Dropdown (Desktop derecha, Mobile centro absoluto) -->
+                        <div id="notifications-panel" class="card" style="display: none; position: absolute; top: 40px; right: 0; width: 320px; max-height: 400px; z-index: 1000; padding: 1rem; overflow-y: auto; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); flex-direction: column; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 8px;">
+                                <h4 style="font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text-primary);">Notificaciones</h4>
+                                <button onclick="clearNotifications()" style="background: none; border: none; color: var(--color-primary); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Limpiar</button>
+                            </div>
+                            <div id="notifications-list" style="display: flex; flex-direction: column; gap: 8px;">
+                                <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem 0;">No tienes nuevas notificaciones.</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <button onclick="logout()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; padding: 4px; transition: var(--transition-smooth); border-radius: var(--radius-sm);" title="Cerrar sesión">
                         <i data-lucide="log-out" style="width: 18px; height: 18px; color: var(--color-danger);"></i>
                     </button>
@@ -275,6 +318,71 @@
                         <div class="calendar-grid" id="calendar-days-grid" style="min-width: 600px;">
                             <!-- Generado dinámicamente -->
                         </div>
+                    </div>
+                </div>
+            <!-- PAGINA 4: DATOS DEL CONSULTORIO (SETTINGS) -->
+            <section id="page-settings" class="page">
+                <div class="section-header">
+                    <h2>Datos del Consultorio</h2>
+                </div>
+                
+                <div class="card" style="max-width: 600px; width: 100%;">
+                    <form id="form-settings" onsubmit="saveClinicSettings(event)">
+                        <div class="form-group" style="margin-bottom: 1.2rem;">
+                            <label for="settings-doctor-name">Nombre del Doctor(a)</label>
+                            <input type="text" id="settings-doctor-name" required placeholder="Dra. Especialista">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Este nombre aparecerá firmado en tus recetas enviadas por WhatsApp.</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.2rem;">
+                            <label for="settings-clinic-address">Dirección del Consultorio</label>
+                            <textarea id="settings-clinic-address" required placeholder="Av. Principal, Edificio Médico, Consultorio 3B" style="width: 100%; min-height: 80px; font-family: inherit; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-primary);"></textarea>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Esta dirección se adjuntará al recordatorio de citas y recetas.</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="settings-owner-phone">Número del Dueño / Contacto del Consultorio</label>
+                            <input type="tel" id="settings-owner-phone" required placeholder="Ej: 584120000000">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Número oficial del consultorio para dudas de pacientes.</span>
+                        </div>
+                        
+                        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px;">Guardar Configuración</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- PAGINA 5: GENERADOR DE LINK DE CITA -->
+            <section id="page-linkgen" class="page">
+                <div class="section-header">
+                    <h2>Generar Link de Cita Única</h2>
+                </div>
+                
+                <div class="card" style="max-width: 600px; width: 100%; display: flex; flex-direction: column; gap: 1.5rem;">
+                    <p style="color: var(--text-secondary); line-height: 1.5;">Selecciona la fecha y hora reservada para tu paciente. Generaremos un enlace de un solo uso que puedes compartirle. Al abrirlo, el paciente completará sus datos para agendarse.</p>
+                    
+                    <form id="form-linkgen" onsubmit="generateAppointmentLink(event)" style="display: flex; flex-direction: column; gap: 1.2rem;">
+                        <div class="form-group">
+                            <label for="link-date">Fecha de la Cita</label>
+                            <input type="date" id="link-date" required>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="link-start-time">Hora de Inicio</label>
+                                <input type="time" id="link-start-time" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="link-end-time">Hora de Fin</label>
+                                <input type="time" id="link-end-time" required>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px;">Generar Enlace</button>
+                    </form>
+
+                    <div id="generated-link-box" style="display: none; padding: 1.5rem; background: var(--bg-app); border: 1px dashed var(--border-color); border-radius: var(--radius-sm); text-align: center; flex-direction: column; gap: 10px;">
+                        <span style="font-weight: 700; color: var(--color-success); font-size: 0.9rem;">¡Enlace generado exitosamente! (Válido para un solo uso)</span>
+                        <input type="text" id="input-shared-link" readonly style="width: 100%; text-align: center; font-family: monospace; background: var(--bg-surface); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin: 5px 0;">
+                        <button class="btn-primary" onclick="copySharedLink()" style="align-self: center; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 8px 16px;">
+                            <i data-lucide="copy" style="width: 16px; height: 16px;"></i> Copiar Enlace
+                        </button>
                     </div>
                 </div>
             </section>
@@ -501,11 +609,10 @@
         </div>
     </div>
 
-    <!-- BARRA DE NAVEGACIÓN INFERIOR PARA MÓVILES -->
     <nav class="mobile-nav">
         <a href="#" class="mobile-nav-item active" id="mobile-nav-dashboard" onclick="switchPage('dashboard')">
             <i data-lucide="layout-dashboard"></i>
-            <span>Dashboard</span>
+            <span>Inicio</span>
         </a>
         <a href="#" class="mobile-nav-item" id="mobile-nav-patients" onclick="switchPage('patients')">
             <i data-lucide="users"></i>
@@ -514,6 +621,14 @@
         <a href="#" class="mobile-nav-item" id="mobile-nav-agenda" onclick="switchPage('agenda')">
             <i data-lucide="calendar"></i>
             <span>Agenda</span>
+        </a>
+        <a href="#" class="mobile-nav-item" id="mobile-nav-settings" onclick="switchPage('settings')">
+            <i data-lucide="settings"></i>
+            <span>Consultorio</span>
+        </a>
+        <a href="#" class="mobile-nav-item" id="mobile-nav-linkgen" onclick="switchPage('linkgen')">
+            <i data-lucide="link-2"></i>
+            <span>Links</span>
         </a>
     </nav>
 

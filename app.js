@@ -15,7 +15,13 @@ let state = {
     theme: localStorage.getItem('appgene_theme') || 'light',
     dashboardDeleteMode: false,
     promptedAppointments: [],
-    user: null
+    user: null,
+    clinicSettings: {
+        doctor_name: 'Dra. Especialista',
+        clinic_address: 'Consultorio Clínico',
+        owner_phone: ''
+    },
+    notifications: []
 };
 
 // ==========================================================
@@ -451,9 +457,10 @@ async function logout() {
 // Fetch all database records from Supabase cloud
 async function refreshStateFromSupabase() {
     try {
-        const [patientsRes, appointmentsRes] = await Promise.all([
+        const [patientsRes, appointmentsRes, settingsRes] = await Promise.all([
             supabaseClient.from('patients').select('*'),
-            supabaseClient.from('appointments').select('*')
+            supabaseClient.from('appointments').select('*'),
+            supabaseClient.from('clinic_settings').select('*').eq('user_id', state.user?.id).maybeSingle()
         ]);
 
         if (patientsRes.error) throw patientsRes.error;
@@ -461,6 +468,24 @@ async function refreshStateFromSupabase() {
 
         state.patients = patientsRes.data || [];
         state.appointments = appointmentsRes.data || [];
+        
+        if (settingsRes.data) {
+            state.clinicSettings = settingsRes.data;
+            // Rellenar formulario settings si está visible
+            const inputDocName = document.getElementById('settings-doctor-name');
+            const inputAddress = document.getElementById('settings-clinic-address');
+            const inputPhone = document.getElementById('settings-owner-phone');
+            
+            if (inputDocName) inputDocName.value = settingsRes.data.doctor_name;
+            if (inputAddress) inputAddress.value = settingsRes.data.clinic_address;
+            if (inputPhone) inputPhone.value = settingsRes.data.owner_phone;
+
+            // Actualizar la firma de la doctora en pantalla
+            const nameEl = document.querySelector('.doctor-name');
+            if (nameEl && settingsRes.data.doctor_name) {
+                nameEl.textContent = settingsRes.data.doctor_name;
+            }
+        }
     } catch (err) {
         console.error("Error al sincronizar con Supabase:", err);
     }
@@ -549,6 +574,8 @@ function switchPage(pageId) {
     if (pageId === 'dashboard') renderDashboard();
     if (pageId === 'patients') renderPatients();
     if (pageId === 'agenda') renderCalendar();
+    if (pageId === 'settings') loadClinicSettingsForm();
+    if (pageId === 'linkgen') initLinkgenPage();
 }
 
 function toggleTheme() {
@@ -1102,11 +1129,16 @@ function generateAndSendWhatsApp() {
     const hasNextAppointment = document.getElementById('toggle-next-appointment').checked;
     const nextDate = hasNextAppointment ? document.getElementById('c-next-appointment').value : null;
 
+    const docName = state.clinicSettings.doctor_name || 'Dra. Especialista';
+    const address = state.clinicSettings.clinic_address || 'Consultorio Clínico';
+
     let message = `Saludos, ${patient.name}\n\nEn la consulta de hoy se determinaron las siguientes observaciones:\n${notes}\n\nTratamiento e indicaciones a seguir:\n${prescription}`;
 
     if (nextDate) {
         message += `\n\nPróxima cita programada: ${nextDate}`;
     }
+
+    message += `\n\nAtentamente,\n${docName}\nUbicación: ${address}`;
 
     const cleanPhone = patient.phone.replace(/[^0-9]/g, ''); // solo dígitos
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
@@ -1431,7 +1463,10 @@ function sendAppointmentReminder(appId) {
     const baseType = app.type.replace('_completed', '');
     const typeLabel = baseType === 'cirugia' ? 'cirugía' : 'cita de control';
 
-    const message = `Hola, ${patient.name}.\n\nTe recordamos tu ${typeLabel} programada para hoy a las ${app.start_time} en el consultorio.\n\nPor favor, confírmanos tu asistencia. ¡Te esperamos!`;
+    const docName = state.clinicSettings.doctor_name || 'Dra. Especialista';
+    const address = state.clinicSettings.clinic_address || 'el consultorio';
+
+    const message = `Hola, ${patient.name}.\n\nTe recordamos tu ${typeLabel} programada para hoy a las ${app.start_time} en ${address}.\n\nPor favor, confírmanos tu asistencia. ¡Te esperamos!\n\nAtentamente,\n${docName}`;
     const cleanPhone = patient.phone.replace(/[^0-9]/g, '');
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
@@ -1773,6 +1808,8 @@ async function cancelAppointmentFromConsultationForm() {
         state.appointments[appIndex].type = 'cancelada';
     }
     
+    }
+    
     closeModal('modal-new-consultation');
     renderDashboard();
     renderCalendar();
@@ -1794,3 +1831,451 @@ async function cancelAppointmentFromConsultationForm() {
         console.error("Error al actualizar en Supabase:", err);
     }
 }
+
+// ==========================================================
+// CONSULTORIO SETTINGS (DATOS DEL CONSULTORIO)
+// ==========================================================
+function loadClinicSettingsForm() {
+    const inputDocName = document.getElementById('settings-doctor-name');
+    const inputAddress = document.getElementById('settings-clinic-address');
+    const inputPhone = document.getElementById('settings-owner-phone');
+    
+    if (inputDocName) inputDocName.value = state.clinicSettings.doctor_name || '';
+    if (inputAddress) inputAddress.value = state.clinicSettings.clinic_address || '';
+    if (inputPhone) inputPhone.value = state.clinicSettings.owner_phone || '';
+}
+
+async function saveClinicSettings(e) {
+    e.preventDefault();
+    if (!validateForm('form-settings')) return;
+
+    const doctor_name = document.getElementById('settings-doctor-name').value;
+    const clinic_address = document.getElementById('settings-clinic-address').value;
+    const owner_phone = document.getElementById('settings-owner-phone').value;
+
+    const updatedSettings = {
+        user_id: state.user.id,
+        doctor_name,
+        clinic_address,
+        owner_phone
+    };
+
+    try {
+        const { error } = await supabaseClient
+            .from('clinic_settings')
+            .upsert(updatedSettings);
+
+        if (error) throw error;
+
+        state.clinicSettings = updatedSettings;
+        
+        // Actualizar firma del doctor en el header
+        const nameEl = document.querySelector('.doctor-name');
+        if (nameEl) nameEl.textContent = doctor_name;
+
+        alert("Los datos del consultorio han sido guardados exitosamente.", "Configuración Guardada");
+    } catch (err) {
+        console.error("Error al guardar configuracion:", err);
+        alert("Ocurrió un error al guardar la configuración: " + err.message);
+    }
+}
+
+// ==========================================================
+// GENERADOR DE LINK DE CITA DE UN SOLO USO
+// ==========================================================
+function initLinkgenPage() {
+    document.getElementById('form-linkgen').reset();
+    document.getElementById('generated-link-box').style.display = 'none';
+    
+    // Auto-rellenar fecha de hoy
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('link-date').value = `${yyyy}-${mm}-${dd}`;
+    
+    // Auto-completar fin de cita +30 min
+    const startInput = document.getElementById('link-start-time');
+    const endInput = document.getElementById('link-end-time');
+    if (startInput && endInput) {
+        startInput.addEventListener('change', () => {
+            const val = startInput.value;
+            if (val) {
+                const [h, m] = val.split(':').map(Number);
+                let endM = m + 30;
+                let endH = h;
+                if (endM >= 60) {
+                    endM -= 60;
+                    endH = (endH + 1) % 24;
+                }
+                endInput.value = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+            }
+        });
+    }
+}
+
+async function generateAppointmentLink(e) {
+    e.preventDefault();
+    if (!validateForm('form-linkgen')) return;
+
+    const date = document.getElementById('link-date').value;
+    const start_time = document.getElementById('link-start-time').value;
+    const end_time = document.getElementById('link-end-time').value;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('appointment_links')
+            .insert([{
+                created_by: state.user.id,
+                date,
+                start_time,
+                end_time,
+                is_used: false
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        const sharedUrl = `${window.location.origin}${window.location.pathname}?linkId=${data.id}`;
+        
+        document.getElementById('input-shared-link').value = sharedUrl;
+        document.getElementById('generated-link-box').style.display = 'flex';
+    } catch (err) {
+        console.error("Error al generar link:", err);
+        alert("No se pudo generar el enlace: " + err.message);
+    }
+}
+
+function copySharedLink() {
+    const input = document.getElementById('input-shared-link');
+    if (!input) return;
+    input.select();
+    document.execCommand('copy');
+    alert("Enlace copiado al portapapeles. Compártelo con tu paciente.", "Copiado");
+}
+
+// Detectar y procesar link público del paciente al cargar
+async function checkPublicAppointmentLink() {
+    const params = new URLSearchParams(window.location.search);
+    const linkId = params.get('linkId');
+    if (!linkId) return;
+
+    // Remover parametro de la URL limpiamente sin recargar
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    try {
+        // Consultar validez del link
+        const { data: linkData, error: linkError } = await supabaseClient
+            .from('appointment_links')
+            .select('*')
+            .eq('id', linkId)
+            .single();
+
+        if (linkError || !linkData) {
+            alert("El enlace de cita no es válido o ha expirado.", "Enlace Inválido");
+            return;
+        }
+
+        if (linkData.is_used) {
+            alert("Este enlace ya fue utilizado para agendar una cita. Por favor, solicita uno nuevo.", "Enlace Usado");
+            return;
+        }
+
+        // Abrir un modal especial para el paciente (reutilizando modal-patient)
+        openPublicPatientRegistrationModal(linkData);
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function openPublicPatientRegistrationModal(linkData) {
+    // Preparar el modal de registro pero para uso público del paciente
+    const modal = document.getElementById('modal-patient');
+    if (!modal) return;
+
+    // Modificar temporalmente títulos y botones del modal
+    const title = modal.querySelector('h3');
+    if (title) title.textContent = `Registra tus datos para la cita de las ${linkData.start_time}`;
+
+    const form = document.getElementById('form-new-patient');
+    
+    // Cambiar submit handler temporalmente
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        if (!validateForm('form-new-patient')) return;
+
+        const id = document.getElementById('p-id').value;
+        const name = document.getElementById('p-name').value;
+        const phone = document.getElementById('p-phone').value;
+        const birth_date = document.getElementById('p-birth').value;
+
+        try {
+            // 1. Validar e insertar paciente
+            const { data: existingPatient } = await supabaseClient.from('patients').select('*').eq('id', id).maybeSingle();
+            
+            if (!existingPatient) {
+                const { error: patErr } = await supabaseClient.from('patients').insert([{
+                    id, name, phone, birth_date, history: []
+                }]);
+                if (patErr) throw patErr;
+            }
+
+            // 2. Insertar cita en base de datos
+            const { error: appErr } = await supabaseClient.from('appointments').insert([{
+                id: 'app-' + Date.now(),
+                patient_id: id,
+                date: linkData.date,
+                start_time: linkData.start_time,
+                end_time: linkData.end_time,
+                type: 'consulta'
+            }]);
+            if (appErr) throw appErr;
+
+            // 3. Quemar el link de un solo uso
+            const { error: linkUpdateErr } = await supabaseClient
+                .from('appointment_links')
+                .update({ is_used: true })
+                .eq('id', linkData.id);
+            if (linkUpdateErr) throw linkUpdateErr;
+
+            alert("¡Tu cita ha sido reservada con éxito! La doctora te espera.", "Cita Confirmada");
+            
+            // Cerrar modal y devolver comportamiento original del formulario
+            modal.style.display = 'none';
+            form.onsubmit = savePatient;
+            if (title) title.textContent = "Registrar Nuevo Paciente";
+        } catch (err) {
+            console.error("Error al registrar paciente público:", err);
+            alert("Ocurrió un error al agendar tu cita: " + err.message);
+        }
+    };
+
+    modal.style.display = 'flex';
+}
+
+// ==========================================================
+// SISTEMA DE NOTIFICACIONES PREMIUM (REAL-TIME Y CERCANÍA DE CITA)
+// ==========================================================
+function toggleNotificationsPanel(event) {
+    event.stopPropagation();
+    const panel = document.getElementById('notifications-panel');
+    if (panel) {
+        panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    }
+}
+
+function addNotification(title, message, type = 'info') {
+    // Estilo móvil centrado absoluto y desktop a la derecha
+    const notif = {
+        id: Date.now(),
+        title,
+        message,
+        type,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    state.notifications.unshift(notif);
+    playNotificationSound();
+    renderNotifications();
+    showToastNotification(notif);
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notifications-list');
+    const badge = document.getElementById('notification-badge');
+    const badgeMobile = document.getElementById('notification-badge-mobile');
+
+    if (!list) return;
+
+    if (state.notifications.length === 0) {
+        list.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem 0;">No tienes nuevas notificaciones.</div>`;
+        if (badge) badge.style.display = 'none';
+        if (badgeMobile) badgeMobile.style.display = 'none';
+        return;
+    }
+
+    // Actualizar badges con contador
+    if (badge) {
+        badge.textContent = state.notifications.length;
+        badge.style.display = 'inline-flex';
+    }
+    if (badgeMobile) {
+        badgeMobile.textContent = state.notifications.length;
+        badgeMobile.style.display = 'inline-flex';
+    }
+
+    list.innerHTML = state.notifications.map(n => {
+        let icon = 'info';
+        let color = 'var(--color-primary)';
+        if (n.type === 'warning') { icon = 'alert-triangle'; color = 'var(--color-warning)'; }
+        if (n.type === 'success') { icon = 'check-circle'; color = 'var(--color-success)'; }
+
+        return `
+            <div style="display: flex; gap: 10px; padding: 10px; border-bottom: 1px solid var(--border-color); align-items: flex-start; text-align: left;">
+                <i data-lucide="${icon}" style="width: 18px; height: 18px; color: ${color}; flex-shrink: 0; margin-top: 2px;"></i>
+                <div style="flex-grow: 1;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">${n.title}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.3;">${n.message}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">${n.time}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    lucide.createIcons();
+}
+
+function clearNotifications() {
+    state.notifications = [];
+    renderNotifications();
+}
+
+// Toast flotante tipo teléfono móvil/escritorio
+function showToastNotification(notif) {
+    const toast = document.createElement('div');
+    toast.className = 'card';
+    toast.style.position = 'fixed';
+    toast.style.zIndex = '999999';
+    toast.style.width = '300px';
+    toast.style.padding = '12px 16px';
+    toast.style.display = 'flex';
+    toast.style.alignItems = 'flex-start';
+    toast.style.gap = '12px';
+    toast.style.boxShadow = 'var(--shadow-lg)';
+    toast.style.border = '1px solid var(--border-color)';
+    toast.style.borderRadius = 'var(--radius-md)';
+    toast.style.animation = 'slideInNotification 0.35s cubic-bezier(0.16, 1, 0.3, 1)';
+    toast.style.transition = 'all 0.3s';
+
+    // Responsividad: en móvil al centro superior, en desktop a la derecha
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        toast.style.top = '20px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+    } else {
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+    }
+
+    let icon = 'info';
+    let color = 'var(--color-primary)';
+    if (notif.type === 'warning') { icon = 'alert-triangle'; color = 'var(--color-warning)'; }
+    if (notif.type === 'success') { icon = 'check-circle'; color = 'var(--color-success)'; }
+
+    toast.innerHTML = `
+        <i data-lucide="${icon}" style="width: 20px; height: 20px; color: ${color}; flex-shrink: 0; margin-top: 2px;"></i>
+        <div style="flex-grow: 1; text-align: left;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">${notif.title}</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.3;">${notif.message}</div>
+        </div>
+        <button style="background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); align-self: flex-start; line-height: 1;" onclick="this.parentElement.remove()">×</button>
+    `;
+
+    document.body.appendChild(toast);
+    lucide.createIcons();
+
+    // Auto-remover a los 5 segundos
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+// Inyectar estilos para animación de toast de notificación si no están en CSS
+const styleEl = document.createElement('style');
+styleEl.innerHTML = `
+@keyframes slideInNotification {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+.blink-blue {
+    animation: blinkBlueBg 2s infinite alternate;
+}
+@keyframes blinkBlueBg {
+    from { background-color: transparent; }
+    to { background-color: rgba(56, 189, 248, 0.15); }
+}
+`;
+document.head.appendChild(styleEl);
+
+// Modificar monitoreo de recordatorios en tiempo real para disparar a los 5 minutos antes
+// Además de chequear en Supabase si se han registrado nuevos pacientes
+let lastPatientsCount = 0;
+
+async function checkRealtimeNotifications() {
+    if (!state.user) return;
+
+    // 1. Chequear si se registró un nuevo paciente mediante link público
+    try {
+        const { count, error } = await supabaseClient
+            .from('patients')
+            .select('*', { count: 'exact', head: true });
+        
+        if (!error && count !== null) {
+            if (lastPatientsCount > 0 && count > lastPatientsCount) {
+                // Alguien se registró
+                await refreshStateFromSupabase();
+                // Obtener el paciente más nuevo
+                const sortedPatients = [...state.patients].sort((a,b) => b.id.localeCompare(a.id)); // o por fecha si existiera
+                const newestPatient = sortedPatients[0];
+                if (newestPatient) {
+                    addNotification("Nuevo Paciente Registrado", `El paciente ${newestPatient.name} se registró mediante un enlace de cita.`, "success");
+                }
+            }
+            lastPatientsCount = count;
+        }
+    } catch (err) {
+        console.error(err);
+    }
+
+    // 2. Alarma a los 5 minutos antes de la cita
+    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    
+    for (let app of state.appointments) {
+        if (app.date === todayStr && !app.type.endsWith('_completed') && app.type !== 'cancelada') {
+            const startMins = timeToMinutes(app.start_time);
+            const nowMins = now.getHours() * 60 + now.getMinutes();
+            const diff = startMins - nowMins;
+
+            // Disparar notificación exactamente 5 minutos antes
+            const alarmKey = `${app.id}_5min`;
+            if (diff === 5 && !state.promptedAppointments.includes(alarmKey)) {
+                state.promptedAppointments.push(alarmKey);
+                
+                const patient = state.patients.find(p => p.id === app.patient_id);
+                const name = patient ? patient.name : 'Paciente';
+                const label = app.type === 'cirugia' ? 'cirugía' : 'consulta';
+                
+                addNotification(
+                    "Cita Próxima (En 5 Minutos)",
+                    `La ${label} de ${name} está programada para iniciar a las ${app.start_time}.`,
+                    "warning"
+                );
+            }
+        }
+    }
+}
+
+// Iniciar monitoreo del link público al iniciar la app
+document.addEventListener('DOMContentLoaded', () => {
+    checkPublicAppointmentLink();
+    
+    // Configurar timers de monitoreo
+    setInterval(checkRealtimeNotifications, 15000);
+});
+
+// Cerrar panel de notificaciones al hacer clic afuera
+document.addEventListener('click', (e) => {
+    const panel = document.getElementById('notifications-panel');
+    if (panel && panel.style.display === 'flex' && !e.target.closest('#notifications-panel') && !e.target.closest('button[onclick="toggleNotificationsPanel(event)"]')) {
+        panel.style.display = 'none';
+    }
+});
