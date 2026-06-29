@@ -24,6 +24,8 @@ let state = {
     notifications: []
 };
 
+let lastPatientsCount = 0;
+
 // ==========================================================
 // CUSTOM STYLISH ALERTS & CONFIRMATIONS (REPLACING BROWSER DEFAULT DEVIANT DIALOGS)
 // ==========================================================
@@ -486,6 +488,7 @@ async function refreshStateFromSupabase() {
 
         state.patients = patientsRes.data || [];
         state.appointments = appointmentsRes.data || [];
+        lastPatientsCount = state.patients.length;
         
         if (settingsRes.data) {
             state.clinicSettings = settingsRes.data;
@@ -893,7 +896,9 @@ async function saveAppointment(e) {
             const patientName = patient ? patient.name : 'Paciente';
             const baseType = app.type.replace('_completed', '');
             const typeLabel = baseType === 'cirugia' ? 'Cirugía' : baseType === 'consulta' ? 'Consulta' : 'Control';
-            return `• ${typeLabel} de ${patientName} (${app.start_time} - ${app.end_time})`;
+            const startTimeFormatted = app.start_time ? app.start_time.substring(0, 5) : '';
+            const endTimeFormatted = app.end_time ? app.end_time.substring(0, 5) : '';
+            return `• ${typeLabel} de ${patientName} (${startTimeFormatted} - ${endTimeFormatted})`;
         }).join('\n');
 
         // Calcular duración
@@ -935,7 +940,7 @@ async function saveAppointment(e) {
                 // Verificar si el paciente ya tiene otra cita ese mismo día
                 const existingApp = state.appointments.find(app => app.patient_id === patientId && app.date === date);
                 if (existingApp) {
-                    const confirmDuplicate = await confirm(`Este cliente tuvo una cita hoy a las ${existingApp.start_time}. ¿Seguro deseas crear otra cita para hoy?`, "Cita Duplicada");
+                    const confirmDuplicate = await confirm(`Este cliente tuvo una cita hoy a las ${existingApp.start_time.substring(0, 5)}. ¿Seguro deseas crear otra cita para hoy?`, "Cita Duplicada");
                     if (!confirmDuplicate) return;
                 }
 
@@ -969,7 +974,7 @@ async function saveAppointment(e) {
     // Verificar si el paciente ya tiene otra cita ese mismo día
     const existingApp = state.appointments.find(app => app.patient_id === patientId && app.date === date);
     if (existingApp) {
-        const confirmDuplicate = await confirm(`Este cliente tuvo una cita hoy a las ${existingApp.start_time}. ¿Seguro deseas crear otra cita para hoy?`, "Cita Duplicada");
+        const confirmDuplicate = await confirm(`Este cliente tuvo una cita hoy a las ${existingApp.start_time.substring(0, 5)}. ¿Seguro deseas crear otra cita para hoy?`, "Cita Duplicada");
         if (!confirmDuplicate) return;
     }
 
@@ -1312,7 +1317,8 @@ function renderCalendar() {
                     const name = patient ? patient.name.split(' ')[0] : 'Pac.';
                     const typeClass = app.type ? app.type.trim().toLowerCase() : '';
                     const typeUpper = app.type ? app.type.toUpperCase() : '';
-                    return `<span class="badge-event badge-${typeClass}" title="${app.start_time} - ${typeUpper}: ${name}" oncontextmenu="event.stopPropagation(); showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">${app.start_time} ${name}</span>`;
+                    const startTimeFormatted = app.start_time ? app.start_time.substring(0, 5) : '';
+                    return `<span class="badge-event badge-${typeClass}" title="${startTimeFormatted} - ${typeUpper}: ${name}" oncontextmenu="event.stopPropagation(); showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')">${startTimeFormatted} ${name}</span>`;
                 }).join('') + `</div>`;
         }
 
@@ -1460,10 +1466,13 @@ function renderDashboard() {
 
         const rowOpacity = isCancelled ? 'opacity: 0.5;' : '';
 
+        const startTimeFormatted = app.start_time ? app.start_time.substring(0, 5) : '';
+        const endTimeFormatted = app.end_time ? app.end_time.substring(0, 5) : '';
+
         return `
             <tr ${rowClass} ${rowClickAction} oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')" style="border-bottom: 1px solid var(--border-color); ${rowOpacity}">
                 ${checkboxCell}
-                <td style="padding: 16px; font-weight:600;">${app.start_time} - ${app.end_time}</td>
+                <td style="padding: 16px; font-weight:600;">${startTimeFormatted} - ${endTimeFormatted}</td>
                 <td style="padding: 16px;">${patientName}</td>
                 <td style="padding: 16px;">${typeBadge}</td>
                 <td style="padding: 16px;">
@@ -2234,7 +2243,6 @@ document.head.appendChild(styleEl);
 
 // Modificar monitoreo de recordatorios en tiempo real para disparar a los 5 minutos antes
 // Además de chequear en Supabase si se han registrado nuevos pacientes
-let lastPatientsCount = 0;
 
 async function checkRealtimeNotifications() {
     if (!state.user) return;
@@ -2243,7 +2251,8 @@ async function checkRealtimeNotifications() {
     try {
         const { count, error } = await supabaseClient
             .from('patients')
-            .select('*', { count: 'exact', head: true });
+            .select('*', { count: 'exact', head: true })
+            .eq('created_by', state.user.id);
         
         if (!error && count !== null) {
             if (lastPatientsCount > 0 && count > lastPatientsCount) {
@@ -2283,7 +2292,7 @@ async function checkRealtimeNotifications() {
                 
                 addNotification(
                     "Cita Próxima (En 5 Minutos)",
-                    `La ${label} de ${name} está programada para iniciar a las ${app.start_time}.`,
+                    `La ${label} de ${name} está programada para iniciar a las ${app.start_time.substring(0, 5)}.`,
                     "warning"
                 );
             }
