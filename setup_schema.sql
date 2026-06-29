@@ -16,10 +16,9 @@ CREATE TABLE IF NOT EXISTS public.clinic_settings (
 ALTER TABLE public.clinic_settings ENABLE ROW LEVEL SECURITY;
 
 -- Policies for clinic_settings
-CREATE POLICY "Allow authenticated users to read their own clinic settings"
+CREATE POLICY "Allow anyone to read clinic settings"
     ON public.clinic_settings FOR SELECT
-    TO authenticated
-    USING (auth.uid() = user_id);
+    USING (true);
 
 CREATE POLICY "Allow authenticated users to insert their own clinic settings"
     ON public.clinic_settings FOR INSERT
