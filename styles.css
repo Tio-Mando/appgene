@@ -782,6 +782,16 @@ header.top-header {
         display: none !important;
     }
 
+    #btn-dashboard-trash {
+        width: 100% !important;
+        padding: 10px 16px !important;
+        border-radius: var(--radius-md) !important;
+    }
+
+    #btn-dashboard-trash .btn-trash-text {
+        display: inline !important;
+    }
+
     .hide-on-mobile {
         display: none !important;
     }
@@ -987,6 +997,10 @@ header.top-header {
     background-color: var(--color-danger) !important;
     opacity: 0.5;
     text-decoration: line-through;
+}
+
+#btn-dashboard-trash .btn-trash-text {
+    display: none;
 }
 
 /* Custom switch slider */

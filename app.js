@@ -1363,6 +1363,21 @@ function renderDashboard() {
     const upcomingSurgeries = state.appointments.filter(app => app.date >= todayStr && app.type === 'cirugia');
     document.getElementById('stat-upcoming-surgeries').textContent = upcomingSurgeries.length;
 
+    const trashBtn = document.getElementById('btn-dashboard-trash');
+    if (trashBtn) {
+        if (todayApps.length === 0) {
+            trashBtn.disabled = true;
+            trashBtn.style.opacity = '0.5';
+            trashBtn.style.cursor = 'not-allowed';
+            trashBtn.title = "No hay citas hoy para eliminar";
+        } else {
+            trashBtn.disabled = false;
+            trashBtn.style.opacity = '1';
+            trashBtn.style.cursor = 'pointer';
+            trashBtn.title = "Seleccionar citas para eliminar";
+        }
+    }
+
     // Tabla del dia
     const todayEventsList = document.getElementById('today-events-list');
     const todayEventsHeader = document.getElementById('today-events-header');
