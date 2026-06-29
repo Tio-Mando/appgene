@@ -1245,7 +1245,23 @@ function renderDashboard() {
             if (isCompleted) {
                 actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem; background: #64748b; box-shadow: 0 4px 10px rgba(100, 116, 139, 0.2);" onclick="openClinicalHistory('${app.patient_id}')">Chequear Consulta</button>`;
             } else {
-                actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="openNewConsultationDirectly('${app.patient_id}', '${app.id}')">Iniciar Consulta</button>`;
+                actionButton = `
+                    <div style="display: inline-flex; gap: 8px; align-items: center;">
+                        <button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="openNewConsultationDirectly('${app.patient_id}', '${app.id}')">Iniciar Consulta</button>
+                        <button class="btn-primary" style="padding: 6px 8px; font-size: 0.85rem; background: var(--color-success); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);" onclick="sendAppointmentReminder('${app.id}')" title="Enviar recordatorio por WhatsApp">
+                            <i data-lucide="bell" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </div>
+                `;
+            }
+        } else {
+            // Si es cirugía activa, agregar opción de recordar también
+            if (!isCompleted) {
+                actionButton = `
+                    <button class="btn-primary" style="padding: 6px 8px; font-size: 0.85rem; background: var(--color-success); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);" onclick="sendAppointmentReminder('${app.id}')" title="Enviar recordatorio por WhatsApp">
+                        <i data-lucide="bell" style="width: 14px; height: 14px;"></i> Recordar
+                    </button>
+                `;
             }
         }
 
@@ -1285,6 +1301,21 @@ function renderDashboard() {
         `;
     }).join('');
     lucide.createIcons();
+}
+
+function sendAppointmentReminder(appId) {
+    const app = state.appointments.find(a => a.id === appId);
+    if (!app) return;
+    const patient = state.patients.find(p => p.id === app.patient_id);
+    if (!patient) return;
+
+    const baseType = app.type.replace('_completed', '');
+    const typeLabel = baseType === 'cirugia' ? 'cirugía' : 'cita de control';
+
+    const message = `Hola, ${patient.name}.\n\nTe recordamos tu ${typeLabel} programada para hoy a las ${app.start_time} en el consultorio.\n\nPor favor, confírmanos tu asistencia. ¡Te esperamos!`;
+    const cleanPhone = patient.phone.replace(/[^0-9]/g, '');
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
 }
 
 function openNewConsultationDirectly(patientId, appId) {
