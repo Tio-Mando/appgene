@@ -2118,12 +2118,32 @@ function openPublicPatientRegistrationModal(linkData) {
                 .eq('id', linkData.id);
             if (linkUpdateErr) throw linkUpdateErr;
 
-            alert("¡Tu cita ha sido reservada con éxito! La doctora te espera.", "Cita Confirmada");
-            
-            // Ocultar vista y redirigir/limpiar
-            if (loginContainer) loginContainer.style.display = 'none';
+            // Formatear fecha bonita
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateObj = new Date(linkData.date.replace(/-/g, '\/'));
+            const formattedDate = dateObj.toLocaleDateString('es-ES', options);
+            const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+
+            const startTimeFormatted = linkData.start_time ? linkData.start_time.substring(0, 5) : '';
+            const endTimeFormatted = linkData.end_time ? linkData.end_time.substring(0, 5) : '';
+
+            // Llenar detalles del éxito
+            const successPatName = document.getElementById('success-patient-name');
+            const successAppDate = document.getElementById('success-appointment-date');
+            const successAppTime = document.getElementById('success-appointment-time');
+            if (successPatName) successPatName.textContent = name;
+            if (successAppDate) successAppDate.textContent = capitalizedDate;
+            if (successAppTime) successAppTime.textContent = `${startTimeFormatted} - ${endTimeFormatted}`;
+
+            // Ocultar formulario de paciente y mostrar pantalla de éxito
             if (patientView) patientView.style.display = 'none';
-            window.location.href = window.location.origin + window.location.pathname;
+            const successView = document.getElementById('auth-success-view');
+            if (successView) successView.style.display = 'flex';
+
+            // Crear iconos de Lucide en la nueva vista
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
         } catch (err) {
             console.error("Error al registrar paciente público:", err);
             alert("Ocurrió un error al agendar tu cita: " + (err.message || JSON.stringify(err)));

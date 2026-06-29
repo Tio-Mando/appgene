@@ -126,6 +126,49 @@
                 <button type="submit" class="btn-primary" style="width: 100%; display: flex; justify-content: center; align-items: center; padding: 12px; margin-top: 0.5rem; font-weight: 700;">Confirmar y Reservar Cita</button>
             </form>
         </div>
+
+        <!-- VISTA DE RESERVA EXITOSA (PACIENTE) -->
+        <div id="auth-success-view" class="card" style="max-width: 480px; width: 100%; padding: 2.5rem; text-align: center; display: none; flex-direction: column; gap: 1.5rem; box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); background-color: var(--bg-surface); animation: fadeIn 0.4s ease;">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 12px;">
+                <div class="logo-icon" style="width: 40px; height: 40px; font-size: 1.2rem;">AG</div>
+                <span class="logo-text" style="font-size: 1.5rem;">appgene</span>
+            </div>
+            
+            <div style="display: flex; justify-content: center; margin: 1rem 0;">
+                <div style="background-color: rgba(34, 197, 94, 0.15); color: #22c55e; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="check-circle" style="width: 40px; height: 40px;"></i>
+                </div>
+            </div>
+
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; color: var(--text-primary); font-weight: 700; margin: 0;">¡Cita Confirmada!</h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin: 0;">
+                Muchas gracias por confiar en nosotros. Tu cita médica ha sido agendada de forma exitosa en nuestra plataforma de gestión inteligente.
+            </p>
+
+            <div style="background-color: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.2rem; text-align: left; display: flex; flex-direction: column; gap: 10px;">
+                <h4 style="margin: 0 0 4px 0; font-family: 'Outfit', sans-serif; font-size: 0.95rem; color: var(--text-primary); font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">Detalles de la Cita</h4>
+                <div style="font-size: 0.9rem; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                    <span style="font-weight: 600;">Paciente:</span>
+                    <span id="success-patient-name" style="color: var(--text-primary);"></span>
+                </div>
+                <div style="font-size: 0.9rem; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                    <span style="font-weight: 600;">Fecha:</span>
+                    <span id="success-appointment-date" style="color: var(--text-primary);"></span>
+                </div>
+                <div style="font-size: 0.9rem; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                    <span style="font-weight: 600;">Hora:</span>
+                    <span id="success-appointment-time" style="color: var(--text-primary);"></span>
+                </div>
+                <div style="font-size: 0.9rem; color: var(--text-secondary); display: flex; justify-content: space-between;">
+                    <span style="font-weight: 600;">Especialidad:</span>
+                    <span style="color: var(--text-primary);">Oftalmología General</span>
+                </div>
+            </div>
+
+            <button onclick="window.location.reload()" class="btn-primary" style="width: 100%; padding: 12px; font-weight: 700; margin-top: 0.5rem; cursor: pointer;">
+                Entendido
+            </button>
+        </div>
     </div>
 
     <div class="app-container" id="app-wrapper" style="display: none; width: 100%; min-height: 100vh;">
