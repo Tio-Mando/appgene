@@ -1,8 +1,8 @@
 // ==========================================================
 // SUPABASE CLIENT INITIALIZATION & CREDENTIALS
 // ==========================================================
-const supabaseUrl = 'https://eczrrtlvbmhtfsctsdfq.supabase.co';
-const supabaseKey = 'sb_publishable_o-uBe3CYjkCegiR-S0UKog_ZCfA_YNY';
+const supabaseUrl = 'https://faxxeewhbhmlxbcxurxl.supabase.co';
+const supabaseKey = 'sb_publishable_eH569-f672z_FhbDMqC_QA_h7FLBTuI';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // State wrapper locally cached to render components instantly
@@ -476,8 +476,8 @@ async function logout() {
 async function refreshStateFromSupabase() {
     try {
         const [patientsRes, appointmentsRes, settingsRes] = await Promise.all([
-            supabaseClient.from('patients').select('*'),
-            supabaseClient.from('appointments').select('*'),
+            supabaseClient.from('patients').select('*').eq('created_by', state.user?.id),
+            supabaseClient.from('appointments').select('*').eq('created_by', state.user?.id),
             supabaseClient.from('clinic_settings').select('*').eq('user_id', state.user?.id).maybeSingle()
         ]);
 
@@ -668,7 +668,7 @@ async function savePatient(e) {
         return;
     }
 
-    const newPatient = { id, name, phone, birth_date, history: [] };
+    const newPatient = { id, name, phone, birth_date, history: [], created_by: state.user.id };
 
     try {
         const { error } = await supabaseClient.from('patients').insert([newPatient]);
@@ -945,7 +945,8 @@ async function saveAppointment(e) {
                     date,
                     type,
                     start_time: selectedSlot.start,
-                    end_time: selectedSlot.end
+                    end_time: selectedSlot.end,
+                    created_by: state.user.id
                 };
 
                 try {
@@ -978,7 +979,8 @@ async function saveAppointment(e) {
         date,
         type,
         start_time: startTime,
-        end_time: endTime
+        end_time: endTime,
+        created_by: state.user.id
     };
 
     try {
@@ -1248,7 +1250,8 @@ async function saveConsultation(e) {
                 date: newRecord.nextAppointment,
                 type: 'control',
                 start_time: "09:00",
-                end_time: "09:30"
+                end_time: "09:30",
+                created_by: state.user.id
             };
 
             const { error: appErr } = await supabaseClient.from('appointments').insert([newApp]);
@@ -2031,7 +2034,7 @@ function openPublicPatientRegistrationModal(linkData) {
             
             if (!existingPatient) {
                 const { error: patErr } = await supabaseClient.from('patients').insert([{
-                    id, name, phone, birth_date, history: []
+                    id, name, phone, birth_date, history: [], created_by: linkData.created_by
                 }]);
                 if (patErr) throw patErr;
             }
@@ -2043,7 +2046,8 @@ function openPublicPatientRegistrationModal(linkData) {
                 date: linkData.date,
                 start_time: linkData.start_time,
                 end_time: linkData.end_time,
-                type: 'consulta'
+                type: 'consulta',
+                created_by: linkData.created_by
             }]);
             if (appErr) throw appErr;
 
