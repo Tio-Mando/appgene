@@ -621,9 +621,10 @@
 
                 <!-- Programar próxima cita con toggle -->
                 <div class="form-group" style="margin-top: 1.2rem;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
-                        <input type="checkbox" id="toggle-next-appointment" onchange="handleNextAppointmentToggle()" style="width: auto; cursor: pointer;">
-                        ¿Programar próxima cita?
+                    <label class="switch-container">
+                        <input type="checkbox" id="toggle-next-appointment" onchange="handleNextAppointmentToggle()">
+                        <span class="slider-switch"></span>
+                        <span>¿Programar próxima cita?</span>
                     </label>
                 </div>
                 <div class="form-grid" id="next-appointment-container" style="display: none; margin-top: 0.8rem;">
@@ -635,9 +636,6 @@
 
                 <!-- Botones de Acción de Consulta -->
                 <div class="consultation-actions" style="display: flex; gap: 12px; margin-top: 1.5rem; width: 100%;">
-                    <button type="button" class="btn-primary" style="background: var(--color-danger); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);" onclick="cancelAppointmentFromConsultationForm()">
-                        <i data-lucide="x-circle"></i> Cancelar Cita
-                    </button>
                     <button type="button" class="btn-primary btn-whatsapp" onclick="generateAndSendWhatsApp()">
                         <i data-lucide="send"></i> Enviar Recipe por WhatsApp
                     </button>
