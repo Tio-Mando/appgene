@@ -1624,6 +1624,14 @@ async function deleteAppointment(appId) {
 // Búsqueda global
 function handleGlobalSearch() {
     const query = document.getElementById('global-search').value.toLowerCase().trim();
+    
+    // Si el usuario escribe y no está en la pestaña de Pacientes, lo redirigimos automáticamente
+    const activePage = document.querySelector('.page.active');
+    const activePageId = activePage ? activePage.id.replace('page-', '') : '';
+    if (query !== '' && activePageId !== 'patients') {
+        switchPage('patients');
+    }
+
     if (query === '') {
         renderPatients();
         return;
