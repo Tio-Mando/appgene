@@ -386,27 +386,16 @@ async function loginWithEmail(e) {
     e.preventDefault();
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
-    
-    // Obtener token de hCaptcha
-    const captchaToken = hcaptcha.getResponse();
-    if (!captchaToken) {
-        alert("Por favor, completa la verificación de seguridad (hCaptcha).", "Verificación Requerida");
-        return;
-    }
 
     try {
         const { data, error } = await supabaseClient.auth.signInWithPassword({
             email,
-            password,
-            options: {
-                captchaToken
-            }
+            password
         });
         if (error) throw error;
     } catch (err) {
         console.error("Error al iniciar sesión con email:", err);
         alert("Credenciales incorrectas: " + (err.message || JSON.stringify(err)), "Error de Autenticación");
-        hcaptcha.reset(); // resetear captcha
     }
 }
 
@@ -416,20 +405,12 @@ async function registerWithEmail(e) {
     const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
 
-    // Obtener token de hCaptcha
-    const captchaToken = hcaptcha.getResponse();
-    if (!captchaToken) {
-        alert("Por favor, completa la verificación de seguridad (hCaptcha).", "Verificación Requerida");
-        return;
-    }
-
     try {
         const { data, error } = await supabaseClient.auth.signUp({
             email,
             password,
             options: {
                 emailRedirectTo: window.location.origin,
-                captchaToken,
                 data: {
                     full_name: name
                 }
@@ -439,11 +420,9 @@ async function registerWithEmail(e) {
         
         alert("¡Registro enviado con éxito! Si tienes la confirmación por correo activa, revisa tu bandeja de entrada.", "Registro Exitoso");
         toggleAuthView('login');
-        hcaptcha.reset();
     } catch (err) {
         console.error("Error al registrarse:", err);
         alert("Ocurrió un error al registrar la cuenta: " + (err.message || JSON.stringify(err)), "Error de Registro");
-        hcaptcha.reset();
     }
 }
 
