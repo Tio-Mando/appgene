@@ -1365,16 +1365,10 @@ function renderDashboard() {
 
     const trashBtn = document.getElementById('btn-dashboard-trash');
     if (trashBtn) {
-        if (todayApps.length === 0) {
-            trashBtn.disabled = true;
-            trashBtn.style.opacity = '0.5';
-            trashBtn.style.cursor = 'not-allowed';
-            trashBtn.title = "No hay citas hoy para eliminar";
+        if (todayApps.length === 0 || state.dashboardDeleteMode) {
+            trashBtn.style.display = 'none';
         } else {
-            trashBtn.disabled = false;
-            trashBtn.style.opacity = '1';
-            trashBtn.style.cursor = 'pointer';
-            trashBtn.title = "Seleccionar citas para eliminar";
+            trashBtn.style.display = 'inline-flex';
         }
     }
 
@@ -1669,7 +1663,6 @@ function enterDashboardDeleteMode() {
 // Búsqueda global
 function exitDashboardDeleteMode() {
     state.dashboardDeleteMode = false;
-    document.getElementById('btn-dashboard-trash').style.display = 'inline-flex';
     const selectAllContainer = document.getElementById('switch-select-all-container');
     const selectAllCheckbox = document.getElementById('chk-select-all');
     if (selectAllContainer) selectAllContainer.style.display = 'none';
