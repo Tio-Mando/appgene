@@ -2535,3 +2535,4 @@ window.clearNotifications = clearNotifications;
 window.toggleSelectAllDashboard = toggleSelectAllDashboard;
 window.updateSelectAllState = updateSelectAllState;
 window.handleNotificationClick = handleNotificationClick;
+window.triggerDeleteCurrentPatient = triggerDeleteCurrentPatient;
