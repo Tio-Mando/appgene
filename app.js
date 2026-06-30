@@ -728,9 +728,15 @@ async function deletePatient(patientId) {
     if (!confirmDelete) return false;
 
     try {
+        console.log(`[Database] Intentando eliminar paciente ID: ${patientId} de la base de datos...`);
         const { error } = await supabaseClient.from('patients').delete().eq('id', patientId);
-        if (error) throw error;
+        if (error) {
+            console.error(`[Database Error] Supabase rechazó la eliminación:`, error);
+            throw error;
+        }
 
+        console.log(`[Database Success] Paciente ID: ${patientId} eliminado exitosamente de Supabase.`);
+        
         // Eliminar del estado local
         state.patients = state.patients.filter(p => p.id !== patientId);
         state.appointments = state.appointments.filter(app => app.patient_id !== patientId);
@@ -739,10 +745,12 @@ async function deletePatient(patientId) {
         renderDashboard();
         renderCalendar();
         populatePatientSelect();
+        
+        alert("El paciente y sus citas asociadas han sido eliminados de la base de datos.", "Paciente Eliminado");
         return true;
     } catch (err) {
         console.error("Error al borrar paciente:", err);
-        alert("Error de red al intentar eliminar el paciente.");
+        alert(`Ocurrió un error al intentar eliminar el paciente en el servidor: ${err.message || JSON.stringify(err)}`, "Error al Eliminar");
         return false;
     }
 }
