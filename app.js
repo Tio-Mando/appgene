@@ -1392,7 +1392,8 @@ function selectDate(dateStr) {
 // RENDER DASHBOARD
 // ==========================================================
 function renderDashboard() {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     
     // Stats
     document.getElementById('stat-patients-count').textContent = state.patients.length;
@@ -1876,7 +1877,8 @@ function playNotificationSound() {
 }
 
 function checkUpcomingAppointments() {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const now = new Date();
     const currentHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
@@ -2491,7 +2493,8 @@ async function checkRealtimeNotifications() {
     }
 
     // 2. Alarma a los 5 minutos antes de la cita
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const now = new Date();
     
     for (let app of state.appointments) {
