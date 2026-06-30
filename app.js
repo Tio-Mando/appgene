@@ -359,12 +359,8 @@ async function handleAuthChange(session) {
         // Cargar datos del usuario autenticado
         await refreshStateFromSupabase();
         
-        // Rellenar datos de prueba si la base de datos remota está vacía
-        if (state.patients.length === 0) {
-            await loadMockData();
-        } else {
-            renderAllViews();
-        }
+        // Rellenar datos de prueba opcionalmente deshabilitado para evitar que clientes borrados reaparezcan
+        renderAllViews();
     } else {
         state.user = null;
         if (loginContainer) loginContainer.style.display = 'flex';
