@@ -2168,8 +2168,7 @@ function openPublicPatientRegistrationModal(linkData, doctorSocialLink) {
                 date: linkData.date,
                 start_time: linkData.start_time,
                 end_time: linkData.end_time,
-                type: 'consulta',
-                created_by: linkData.created_by
+                type: 'consulta'
             }]);
             if (appErr) throw appErr;
 
