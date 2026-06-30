@@ -2176,7 +2176,8 @@ function openPublicPatientRegistrationModal(linkData, doctorSocialLink) {
                 date: linkData.date,
                 start_time: linkData.start_time,
                 end_time: linkData.end_time,
-                type: 'consulta'
+                type: 'consulta',
+                created_by: linkData.created_by
             }]);
             if (appErr) throw appErr;
 
@@ -2187,9 +2188,10 @@ function openPublicPatientRegistrationModal(linkData, doctorSocialLink) {
                 .eq('id', linkData.id);
             if (linkUpdateErr) throw linkUpdateErr;
 
-            // Formatear fecha bonita
+            // Formatear fecha bonita sin offset UTC
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const dateObj = new Date(linkData.date.replace(/-/g, '\/'));
+            const [yPart, mPart, dPart] = linkData.date.split('-');
+            const dateObj = new Date(yPart, mPart - 1, dPart);
             const formattedDate = dateObj.toLocaleDateString('es-ES', options);
             const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
 
