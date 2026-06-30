@@ -1403,6 +1403,17 @@ function renderDashboard() {
     const upcomingSurgeries = state.appointments.filter(app => app.date >= todayStr && app.type === 'cirugia');
     document.getElementById('stat-upcoming-surgeries').textContent = upcomingSurgeries.length;
 
+    // Actualizar la cabecera con la fecha del día actual local
+    const titleEl = document.getElementById('dashboard-activity-title');
+    if (titleEl) {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const [y, m, d] = todayStr.split('-');
+        const todayObj = new Date(y, m - 1, d);
+        const formattedDate = todayObj.toLocaleDateString('es-ES', options);
+        const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+        titleEl.textContent = `Actividad de Citas del Día (${capitalizedDate})`;
+    }
+
     const trashBtn = document.getElementById('btn-dashboard-trash');
     if (trashBtn) {
         if (todayApps.length === 0 || state.dashboardDeleteMode) {
