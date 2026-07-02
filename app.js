@@ -1520,7 +1520,7 @@ function selectDate(dateStr) {
     const formattedDate = dateObj.toLocaleDateString('es-ES', options);
     const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
     
-    document.getElementById('day-appointments-title').textContent = `Citas del Día (${capitalizedDate})`;
+    document.getElementById('day-appointments-title').innerHTML = `Citas del Día <br>(${capitalizedDate})`;
     
     // Configurar botón "Agendar Cita"
     const addBtn = document.getElementById('btn-add-appointment-from-day');
@@ -1654,7 +1654,7 @@ function renderDashboard() {
         const todayObj = new Date(y, m - 1, d);
         const formattedDate = todayObj.toLocaleDateString('es-ES', options);
         const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
-        titleEl.textContent = `Actividad de Citas del Día (${capitalizedDate})`;
+        titleEl.innerHTML = `Actividad de Citas del Día <br>(${capitalizedDate})`;
     }
 
     const trashBtn = document.getElementById('btn-dashboard-trash');
