@@ -1060,3 +1060,467 @@ input:checked + .slider-switch:before {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
+/* ==========================================================
+   MOBILE MINIMALIST TODAY EVENTS TABLE/CARD LAYOUT
+   ========================================================== */
+@media (max-width: 768px) {
+    /* Hacer que los botones de cabecera en móvil tomen el 100% del ancho */
+    .section-header .btn-primary {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    #table-today-events, 
+    #table-today-events thead, 
+    #table-today-events tbody, 
+    #table-today-events tr, 
+    #table-today-events td,
+    #table-day-appointments-events, 
+    #table-day-appointments-events thead, 
+    #table-day-appointments-events tbody, 
+    #table-day-appointments-events tr, 
+    #table-day-appointments-events td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    #today-events-header,
+    #day-appointments-header {
+        display: none !important;
+    }
+    
+    #today-events-list,
+    #day-appointments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 8px;
+    }
+    
+    #today-events-list tr,
+    #day-appointments-list tr {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 12px 14px !important;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: grid !important;
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas: 
+            "checkbox patient type"
+            "checkbox time type"
+            "actions actions actions";
+        align-items: center;
+        gap: 6px 12px;
+        border-bottom: 1px solid var(--border-color) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    #today-events-list tr.mobile-expanded,
+    #day-appointments-list tr.mobile-expanded {
+        background: var(--bg-surface-hover);
+        border-color: var(--color-primary);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    }
+
+    #today-events-list td,
+    #day-appointments-list td {
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+    }
+
+    #today-events-list td.col-checkbox,
+    #day-appointments-list td.col-checkbox {
+        grid-area: checkbox;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #today-events-list td.col-patient,
+    #day-appointments-list td.col-patient {
+        grid-area: patient;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    #today-events-list td.col-time,
+    #day-appointments-list td.col-time {
+        grid-area: time;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-muted);
+    }
+
+    #today-events-list td.col-type,
+    #day-appointments-list td.col-type {
+        grid-area: type;
+        justify-self: end;
+    }
+
+    #today-events-list td.col-actions,
+    #day-appointments-list td.col-actions {
+        grid-area: actions;
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.3s ease, margin-top 0.3s ease;
+        overflow: hidden;
+        width: 100%;
+        margin-top: 0;
+    }
+
+    #today-events-list tr.mobile-expanded td.col-actions,
+    #day-appointments-list tr.mobile-expanded td.col-actions {
+        grid-template-rows: 1fr;
+        margin-top: 12px;
+    }
+
+    #today-events-list td.col-actions > div,
+    #today-events-list td.col-actions > button,
+    #day-appointments-list td.col-actions > div,
+    #day-appointments-list td.col-actions > button {
+        min-height: 0;
+        transition: visibility 0.3s;
+        visibility: hidden;
+    }
+
+    #today-events-list tr.mobile-expanded td.col-actions > div,
+    #today-events-list tr.mobile-expanded td.col-actions > button,
+    #day-appointments-list tr.mobile-expanded td.col-actions > div,
+    #day-appointments-list tr.mobile-expanded td.col-actions > button {
+        visibility: visible;
+    }
+
+    #today-events-list td.col-actions > div,
+    #day-appointments-list td.col-actions > div {
+        display: flex !important;
+        width: 100%;
+        gap: 8px;
+    }
+    
+    #today-events-list td.col-actions button.btn-primary,
+    #day-appointments-list td.col-actions button.btn-primary {
+        margin: 0;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 16px !important;
+        box-sizing: border-box;
+    }
+    
+    #today-events-list td.col-actions > div > button:first-child,
+    #day-appointments-list td.col-actions > div > button:first-child {
+        flex: 1;
+        font-size: 0.9rem !important;
+    }
+    
+    #today-events-list td.col-actions > div > button:last-child,
+    #day-appointments-list td.col-actions > div > button:last-child {
+        width: 40px;
+        height: 40px;
+        padding: 0 !important;
+        flex-shrink: 0;
+    }
+    
+    #today-events-list td.col-actions > button.btn-primary,
+    #day-appointments-list td.col-actions > button.btn-primary {
+        width: 100% !important;
+        font-size: 0.9rem !important;
+    }
+}
+
+/* ==========================================================
+   PATIENT INFO BAR (CLINICAL HISTORY MODAL) RESPONSIVE STYLING
+   ========================================================== */
+.ch-patient-info-bar {
+    background-color: var(--bg-app);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 1.2rem;
+    margin-bottom: 1.2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 24px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    line-height: 1.4;
+    min-height: 80px;
+    box-sizing: border-box;
+}
+
+.ch-patient-info-bar .info-item {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+}
+
+.ch-patient-info-bar .info-key {
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.ch-patient-info-bar .info-val {
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .ch-patient-info-bar {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 1rem;
+    }
+    
+    .ch-patient-info-bar .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+        padding-bottom: 6px;
+    }
+    
+    .ch-patient-info-bar .info-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .ch-patient-info-bar .info-val {
+        text-align: right;
+        font-weight: 500;
+    }
+}
+
+/* ==========================================================
+   MOBILE MINIMALIST PATIENTS TABLE/CARD LAYOUT
+   ========================================================== */
+@media (max-width: 768px) {
+    #table-patients-list, 
+    #table-patients-list thead, 
+    #table-patients-list tbody, 
+    #table-patients-list tr, 
+    #table-patients-list td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    #table-patients-list thead {
+        display: none !important;
+    }
+    
+    #patients-list-table {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 8px;
+    }
+    
+    #patients-list-table tr {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 12px 14px !important;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: grid !important;
+        grid-template-columns: 1fr;
+        grid-template-areas: 
+            "name"
+            "id"
+            "actions";
+        align-items: center;
+        gap: 4px;
+        border-bottom: 1px solid var(--border-color) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    #patients-list-table tr.mobile-expanded {
+        background: var(--bg-surface-hover);
+        border-color: var(--color-primary);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    }
+
+    #patients-list-table td {
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+    }
+
+    #patients-list-table td.col-pat-name {
+        grid-area: name;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    #patients-list-table td.col-pat-id {
+        grid-area: id;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--text-muted);
+    }
+
+    #patients-list-table td.col-pat-phone {
+        display: none !important;
+    }
+
+    #patients-list-table td.col-pat-actions {
+        grid-area: actions;
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.3s ease, margin-top 0.3s ease;
+        overflow: hidden;
+        width: 100%;
+        margin-top: 0;
+    }
+
+    #patients-list-table tr.mobile-expanded td.col-pat-actions {
+        grid-template-rows: 1fr;
+        margin-top: 12px;
+    }
+
+    #patients-list-table .pat-action-group {
+        min-height: 0;
+        transition: visibility 0.3s;
+        visibility: hidden;
+        display: flex !important;
+        width: 100%;
+        gap: 8px;
+    }
+
+    #patients-list-table tr.mobile-expanded .pat-action-group {
+        visibility: visible;
+    }
+    
+    #patients-list-table .pat-action-group button.btn-primary,
+    #patients-list-table .pat-action-group a.btn-square-wa {
+        margin: 0;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+    
+    #patients-list-table .pat-action-group button.btn-primary {
+        flex: 1;
+        font-size: 0.9rem !important;
+        padding: 8px 16px !important;
+    }
+
+    #patients-list-table .pat-action-group button.btn-primary .desktop-only-icon {
+        display: none !important;
+    }
+
+    #patients-list-table .pat-action-group button.btn-primary .mobile-only-text {
+        display: inline !important;
+    }
+    
+    #patients-list-table .pat-action-group a.btn-square-wa {
+        display: inline-flex !important;
+        width: 40px;
+        height: 40px;
+        padding: 0 !important;
+        flex-shrink: 0;
+    }
+}
+
+/* ==========================================================
+   MOBILE CALENDAR 100% WIDTH AND EVENT DOTS STYLING
+   ========================================================== */
+@media (max-width: 768px) {
+    #calendar-days-grid {
+        min-width: 0 !important;
+        width: 100% !important;
+        gap: 4px;
+    }
+    
+    .calendar-day {
+        aspect-ratio: 1 !important;
+        padding: 4px !important;
+        min-height: 48px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+
+    .calendar-day-number {
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        margin-bottom: 2px !important;
+    }
+
+    .calendar-events {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        gap: 3px !important;
+        flex-wrap: wrap !important;
+        margin-top: auto !important;
+        width: 100% !important;
+    }
+
+    .calendar-events .badge-event {
+        width: 7px !important;
+        height: 7px !important;
+        border-radius: 50% !important;
+        padding: 0 !important;
+        font-size: 0 !important;
+        text-indent: -9999px !important;
+        overflow: hidden !important;
+        display: inline-block !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+    
+    /* Hacer que los botones de envío dentro de los modales ocupen el 100% de ancho en móvil */
+    .modal-content button[type="submit"],
+    .modal-content form button.btn-primary {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* Hacer que el botón de eliminar citas y sus acciones asociadas tomen el 100% de ancho en móvil */
+    #dashboard-delete-actions {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+    #switch-select-all-container {
+        width: 100% !important;
+        margin-bottom: 4px;
+        display: flex !important;
+    }
+    #btn-dashboard-trash {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 12px 24px !important;
+        font-size: 1rem !important;
+        box-sizing: border-box !important;
+    }
+    #btn-dashboard-delete-confirm,
+    #btn-dashboard-delete-cancel {
+        flex: 1 !important;
+        width: auto !important;
+        justify-content: center !important;
+        padding: 12px 24px !important;
+        font-size: 1rem !important;
+        box-sizing: border-box !important;
+    }
+}
+

@@ -15,6 +15,7 @@ let state = {
     theme: localStorage.getItem('appgene_theme') || 'light',
     dashboardDeleteMode: false,
     promptedAppointments: [],
+    editPatientId: null,
     user: null,
     clinicSettings: {
         doctor_name: 'Dra. Especialista',
@@ -625,8 +626,19 @@ function updateThemeUI() {
 // MODALS
 // ==========================================================
 function openNewPatientModal() {
+    state.editPatientId = null;
+    const pIdInput = document.getElementById('p-id');
+    if (pIdInput) pIdInput.disabled = false;
+    
+    const titleEl = document.querySelector('#modal-patient h3');
+    if (titleEl) titleEl.textContent = "Registrar Nuevo Paciente";
+
     document.getElementById('form-new-patient').reset();
-    document.getElementById('modal-patient').style.display = 'flex';
+    const modalEl = document.getElementById('modal-patient');
+    if (modalEl) {
+        modalEl.style.zIndex = '';
+        modalEl.style.display = 'flex';
+    }
 }
 
 function openNewAppointmentModal() {
@@ -656,34 +668,139 @@ function populatePatientSelect() {
     select.innerHTML = state.patients.map(p => `<option value="${p.id}">${p.name} (${p.id})</option>`).join('');
 }
 
+function formatPhoneNumber(phone) {
+    if (!phone) return '';
+    let cleaned = phone.trim();
+    if (cleaned.startsWith('0')) {
+        cleaned = '58' + cleaned.substring(1);
+    } else if (cleaned.startsWith('+0')) {
+        cleaned = '58' + cleaned.substring(2);
+    } else if (cleaned.startsWith('+58')) {
+        cleaned = '58' + cleaned.substring(3);
+    }
+    cleaned = cleaned.replace(/[^0-9]/g, '');
+    if (cleaned.length === 10 && (cleaned.startsWith('412') || cleaned.startsWith('414') || cleaned.startsWith('424') || cleaned.startsWith('416') || cleaned.startsWith('426'))) {
+        cleaned = '58' + cleaned;
+    }
+    return cleaned;
+}
+
 async function savePatient(e) {
     e.preventDefault();
     if (!validateForm('form-new-patient')) return;
     const id = document.getElementById('p-id').value;
     const name = document.getElementById('p-name').value;
-    const phone = document.getElementById('p-phone').value;
+    const phoneRaw = document.getElementById('p-phone').value;
+    const phone = formatPhoneNumber(phoneRaw);
     const birth_date = document.getElementById('p-birth').value;
 
-    if (state.patients.some(p => p.id === id)) {
-        alert("Ya existe un paciente registrado con ese documento de identidad.");
+    if (state.editPatientId) {
+        try {
+            console.log("Iniciando actualización de paciente. ID:", state.editPatientId, "Nuevos datos:", { name, phone, birth_date });
+            const { error } = await supabaseClient
+                .from('patients')
+                .update({ name, phone, birth_date })
+                .eq('id', state.editPatientId);
+
+            if (error) throw error;
+
+            // Actualizar localmente con coerción de tipo a String para evitar discrepancias
+            const idx = state.patients.findIndex(p => String(p.id) === String(state.editPatientId));
+            if (idx !== -1) {
+                state.patients[idx] = { ...state.patients[idx], name, phone, birth_date };
+                console.log("Paciente actualizado en estado local index:", idx);
+            } else {
+                console.warn("No se encontró el paciente en el estado local para ID:", state.editPatientId);
+            }
+
+            closeModal('modal-patient');
+            renderPatients();
+            renderDashboard();
+            populatePatientSelect();
+            
+            // Recargar datos en la vista de historia clínica si sigue abierta
+            if (String(state.currentPatientId) === String(state.editPatientId)) {
+                openClinicalHistory(state.editPatientId);
+            }
+            
+            state.editPatientId = null;
+            alert("Los datos del paciente han sido actualizados exitosamente.", "Éxito");
+        } catch (err) {
+            console.error("Error al actualizar paciente:", err);
+            alert("Error al actualizar los datos del paciente: " + (err.message || JSON.stringify(err)));
+        }
+    } else {
+        if (state.patients.some(p => String(p.id) === String(id))) {
+            alert("Ya existe un paciente registrado con ese documento de identidad.");
+            return;
+        }
+
+        const newPatient = { id, name, phone, birth_date, history: [], created_by: state.user.id };
+
+        try {
+            const { error } = await supabaseClient.from('patients').insert([newPatient]);
+            if (error) throw error;
+
+            // Actualizar localmente y renderizar
+            state.patients.push(newPatient);
+            closeModal('modal-patient');
+            renderPatients();
+            renderDashboard();
+            populatePatientSelect();
+            alert("Paciente registrado exitosamente.", "Éxito");
+        } catch (err) {
+            console.error("Error al registrar paciente:", err);
+            alert("Error al registrar paciente en el servidor: " + (err.message || JSON.stringify(err)));
+        }
+    }
+}
+
+function openEditPatientModal(patientId) {
+    const patient = state.patients.find(p => String(p.id) === String(patientId));
+    if (!patient) {
+        console.error("No se encontró el paciente con ID:", patientId);
         return;
     }
 
-    const newPatient = { id, name, phone, birth_date, history: [], created_by: state.user.id };
+    state.editPatientId = patientId;
 
-    try {
-        const { error } = await supabaseClient.from('patients').insert([newPatient]);
-        if (error) throw error;
+    document.getElementById('p-id').value = patient.id;
+    document.getElementById('p-id').disabled = true; // No permitir cambiar la cédula
+    document.getElementById('p-name').value = patient.name;
+    document.getElementById('p-phone').value = patient.phone;
+    document.getElementById('p-birth').value = patient.birth_date;
 
-        // Actualizar localmente y renderizar
-        state.patients.push(newPatient);
-        closeModal('modal-patient');
-        renderPatients();
-        renderDashboard();
-        populatePatientSelect();
-    } catch (err) {
-        console.error("Error al registrar paciente:", err);
-        alert("Error al registrar paciente en el servidor: " + (err.message || JSON.stringify(err)));
+    const titleEl = document.querySelector('#modal-patient h3');
+    if (titleEl) titleEl.textContent = "Editar Datos del Paciente";
+
+    // Establecer z-index en 1100 para sobreponerlo a otros modales
+    const modalEl = document.getElementById('modal-patient');
+    if (modalEl) {
+        modalEl.style.zIndex = '1100';
+        modalEl.style.display = 'flex';
+    }
+}
+
+function toggleMobilePatientRow(row, event) {
+    if (window.innerWidth > 768) return;
+    
+    // Si se hizo clic en un botón o enlace, no hacer toggle
+    if (event.target.closest('button') || event.target.closest('a') || event.target.closest('input')) {
+        return;
+    }
+    
+    const isExpanded = row.classList.contains('mobile-expanded');
+    const tbody = row.closest('tbody');
+    
+    // Cerrar los demás dentro del mismo contenedor
+    if (tbody) {
+        tbody.querySelectorAll('tr').forEach(r => {
+            r.classList.remove('mobile-expanded');
+        });
+    }
+    
+    if (!isExpanded) {
+        row.classList.add('mobile-expanded');
     }
 }
 
@@ -700,19 +817,25 @@ function renderPatients() {
         const waLink = `https://wa.me/${whatsappPhone}`;
 
         return `
-            <tr style="border-bottom: 1px solid var(--border-color); hover:background-color: var(--bg-surface-hover);">
-                <td style="padding: 16px; font-weight: 600;">${p.id}</td>
-                <td style="padding: 16px;">${p.name}</td>
-                <td style="padding: 16px;">
+            <tr onclick="toggleMobilePatientRow(this, event)" style="border-bottom: 1px solid var(--border-color); hover:background-color: var(--bg-surface-hover); cursor: pointer;">
+                <td class="col-pat-id" style="padding: 16px; font-weight: 600;">${p.id}</td>
+                <td class="col-pat-name" style="padding: 16px;">${p.name}</td>
+                <td class="col-pat-phone" style="padding: 16px;">
                     <a href="${waLink}" target="_blank" style="color: var(--color-primary); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;" title="Abrir chat de WhatsApp">
                         <i data-lucide="message-circle" style="width: 16px; height: 16px; color: var(--color-success);"></i>
                         ${p.phone}
                     </a>
                 </td>
-                <td style="padding: 16px;">
-                    <button class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center;" onclick="openClinicalHistory('${p.id}')" title="Ver Historia Clínica">
-                        <i data-lucide="file-text"></i>
-                    </button>
+                <td class="col-pat-actions" style="padding: 16px;">
+                    <div class="pat-action-group" style="display: inline-flex; gap: 8px; align-items: center;">
+                        <button class="btn-primary" style="padding: 8px 12px; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center;" onclick="openClinicalHistory('${p.id}')" title="Ver Historia Clínica">
+                            <i data-lucide="file-text" class="desktop-only-icon"></i>
+                            <span class="mobile-only-text" style="display: none;">Ver Historia Clínica</span>
+                        </button>
+                        <a href="${waLink}" target="_blank" class="btn-primary btn-square-wa" title="Abrir chat de WhatsApp" style="display: none; padding: 8px; font-size: 0.85rem; background: var(--color-success); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); align-items: center; justify-content: center; border-radius: var(--radius-md); text-decoration: none; color: white;">
+                            <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i>
+                        </a>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1013,7 +1136,7 @@ async function saveAppointment(e) {
 // ==========================================================
 function openClinicalHistory(patientId) {
     state.currentPatientId = patientId;
-    const patient = state.patients.find(p => p.id === patientId);
+    const patient = state.patients.find(p => String(p.id) === String(patientId));
     if (!patient) return;
 
     document.getElementById('ch-patient-title').textContent = `Historia Clínica - ${patient.name}`;
@@ -1205,7 +1328,10 @@ function generateAndSendWhatsApp() {
 
     message += `\n\nAtentamente,\n${docName}\nUbicación: ${address}`;
 
-    const cleanPhone = patient.phone.replace(/[^0-9]/g, ''); // solo dígitos
+    let cleanPhone = patient.phone.replace(/[^0-9]/g, ''); // solo dígitos
+    if (cleanPhone.startsWith('0')) {
+        cleanPhone = '58' + cleanPhone.substring(1);
+    }
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
 }
@@ -1385,8 +1511,123 @@ function nextMonth() {
 }
 
 function selectDate(dateStr) {
-    openNewAppointmentModal();
-    document.getElementById('app-date').value = dateStr;
+    const dayApps = state.appointments.filter(app => app.date === dateStr);
+    
+    // Configurar título del modal
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const [y, m, d] = dateStr.split('-');
+    const dateObj = new Date(y, m - 1, d);
+    const formattedDate = dateObj.toLocaleDateString('es-ES', options);
+    const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+    
+    document.getElementById('day-appointments-title').textContent = `Citas del Día (${capitalizedDate})`;
+    
+    // Configurar botón "Agendar Cita"
+    const addBtn = document.getElementById('btn-add-appointment-from-day');
+    if (addBtn) {
+        addBtn.onclick = () => {
+            closeModal('modal-day-appointments');
+            openNewAppointmentModal();
+            document.getElementById('app-date').value = dateStr;
+        };
+    }
+    
+    const listContainer = document.getElementById('day-appointments-list');
+    if (!listContainer) return;
+    
+    if (dayApps.length === 0) {
+        listContainer.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No hay citas o cirugías programadas para este día.</td></tr>`;
+    } else {
+        // Ordenar por hora de inicio
+        dayApps.sort((a,b) => a.start_time.localeCompare(b.start_time));
+        
+        listContainer.innerHTML = dayApps.map(app => {
+            const patient = state.patients.find(p => String(p.id) === String(app.patient_id));
+            const patientName = patient ? patient.name : 'Desconocido';
+            
+            const isCancelled = app.type && app.type.trim().toLowerCase() === 'cancelada';
+            const isCompleted = app.type && app.type.endsWith('_completed');
+            const baseType = app.type ? app.type.replace('_completed', '') : '';
+            
+            let typeLabel = baseType === 'cirugia' ? 'Cirugía' : baseType === 'consulta' ? 'Consulta' : 'Control';
+            let typeBadge = '';
+            if (isCancelled) {
+                typeBadge = `<span class="badge-event" style="display:inline-block; padding: 4px 8px; background-color: #ef4444; color: white;">Cancelada</span>`;
+            } else {
+                typeBadge = `<span class="badge-event badge-${baseType}${isCompleted ? '_completed' : ''}" style="display:inline-block; padding: 4px 8px;">${typeLabel}${isCompleted ? ' (Realizada)' : ''}</span>`;
+            }
+            
+            let actionButton = 'N/A';
+            if (isCancelled) {
+                actionButton = `<button class="btn-primary" disabled style="padding: 6px 12px; font-size: 0.85rem; background: #e2e8f0 !important; background-image: none !important; color: #94a3b8 !important; border: 1px solid #cbd5e1 !important; cursor: not-allowed !important; pointer-events: none !important; box-shadow: none !important; transform: none !important;">Iniciar Consulta</button>`;
+            } else if (baseType !== 'cirugia') {
+                if (isCompleted) {
+                    actionButton = `<button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem; background: #64748b; box-shadow: 0 4px 10px rgba(100, 116, 139, 0.2);" onclick="openClinicalHistory('${app.patient_id}')">Chequear Consulta</button>`;
+                } else {
+                    actionButton = `
+                        <div style="display: inline-flex; gap: 8px; align-items: center;">
+                            <button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="closeModal('modal-day-appointments'); openNewConsultationDirectly('${app.patient_id}', '${app.id}')">Iniciar Consulta</button>
+                            <button class="btn-primary" style="padding: 6px 8px; font-size: 0.85rem; background: var(--color-success); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);" onclick="sendAppointmentReminder('${app.id}')" title="Enviar recordatorio por WhatsApp">
+                                <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+            } else {
+                if (!isCompleted) {
+                    actionButton = `
+                        <button class="btn-primary" style="padding: 6px 8px; font-size: 0.85rem; background: var(--color-success); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);" onclick="sendAppointmentReminder('${app.id}')" title="Enviar recordatorio por WhatsApp">
+                            <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i> Recordar
+                        </button>
+                    `;
+                }
+            }
+            
+            const rowClass = "";
+            const rowClickAction = `onclick="toggleMobileRow(this, event)" style="cursor: pointer;"`;
+            const rowOpacity = isCancelled ? 'opacity: 0.5;' : '';
+            const startTimeFormatted = app.start_time ? app.start_time.substring(0, 5) : '';
+            const endTimeFormatted = app.end_time ? app.end_time.substring(0, 5) : '';
+            
+            return `
+                <tr ${rowClass} ${rowClickAction} style="border-bottom: 1px solid var(--border-color); ${rowOpacity}">
+                    <td class="col-time" style="padding: 16px; font-weight:600;">${startTimeFormatted} - ${endTimeFormatted}</td>
+                    <td class="col-patient" style="padding: 16px;">${patientName}</td>
+                    <td class="col-type" style="padding: 16px;">${typeBadge}</td>
+                    <td class="col-actions" style="padding: 16px;">
+                        ${actionButton}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    document.getElementById('modal-day-appointments').style.display = 'flex';
+    lucide.createIcons();
+}
+
+function toggleMobileRow(row, event) {
+    if (window.innerWidth > 768) return;
+    if (state.dashboardDeleteMode) return;
+    
+    // Si se hizo clic en un botón, enlace o elemento de formulario, no hacer toggle
+    if (event.target.closest('button') || event.target.closest('input') || event.target.closest('a')) {
+        return;
+    }
+    
+    const isExpanded = row.classList.contains('mobile-expanded');
+    const tbody = row.closest('tbody');
+    
+    // Cerrar los demás dentro del mismo contenedor
+    if (tbody) {
+        tbody.querySelectorAll('tr').forEach(r => {
+            r.classList.remove('mobile-expanded');
+        });
+    }
+    
+    if (!isExpanded) {
+        row.classList.add('mobile-expanded');
+    }
 }
 
 // ==========================================================
@@ -1489,7 +1730,7 @@ function renderDashboard() {
                     <div style="display: inline-flex; gap: 8px; align-items: center;">
                         <button class="btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="openNewConsultationDirectly('${app.patient_id}', '${app.id}')">Iniciar Consulta</button>
                         <button class="btn-primary" style="padding: 6px 8px; font-size: 0.85rem; background: var(--color-success); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);" onclick="sendAppointmentReminder('${app.id}')" title="Enviar recordatorio por WhatsApp">
-                            <i data-lucide="bell" style="width: 14px; height: 14px;"></i>
+                            <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
                         </button>
                     </div>
                 `;
@@ -1499,7 +1740,7 @@ function renderDashboard() {
             if (!isCompleted) {
                 actionButton = `
                     <button class="btn-primary" style="padding: 6px 8px; font-size: 0.85rem; background: var(--color-success); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);" onclick="sendAppointmentReminder('${app.id}')" title="Enviar recordatorio por WhatsApp">
-                        <i data-lucide="bell" style="width: 14px; height: 14px;"></i> Recordar
+                        <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i> Recordar
                     </button>
                 `;
             }
@@ -1519,12 +1760,12 @@ function renderDashboard() {
         }
 
         const checkboxCell = state.dashboardDeleteMode ? `
-            <td style="padding: 16px; text-align: center;">
+            <td class="col-checkbox" style="padding: 16px; text-align: center;">
                 <input type="checkbox" class="delete-app-checkbox" value="${app.id}" id="chk-${app.id}" style="width: 18px; height: 18px; cursor: pointer;" onclick="event.stopPropagation(); updateSelectAllState();">
             </td>
         ` : '';
 
-        const rowClickAction = state.dashboardDeleteMode ? `onclick="toggleRowCheckbox(event, 'chk-${app.id}')" style="cursor: pointer;"` : 'style="cursor: context-menu;"';
+        const rowClickAction = state.dashboardDeleteMode ? `onclick="toggleRowCheckbox(event, 'chk-${app.id}')" style="cursor: pointer;"` : 'onclick="toggleMobileRow(this, event)" style="cursor: pointer;"';
 
         const rowOpacity = isCancelled ? 'opacity: 0.5;' : '';
 
@@ -1534,10 +1775,10 @@ function renderDashboard() {
         return `
             <tr ${rowClass} ${rowClickAction} oncontextmenu="showContextMenu(event, '${app.id}', '${app.type}', '${app.patient_id}')" style="border-bottom: 1px solid var(--border-color); ${rowOpacity}">
                 ${checkboxCell}
-                <td style="padding: 16px; font-weight:600;">${startTimeFormatted} - ${endTimeFormatted}</td>
-                <td style="padding: 16px;">${patientName}</td>
-                <td style="padding: 16px;">${typeBadge}</td>
-                <td style="padding: 16px;">
+                <td class="col-time" style="padding: 16px; font-weight:600;">${startTimeFormatted} - ${endTimeFormatted}</td>
+                <td class="col-patient" style="padding: 16px;">${patientName}</td>
+                <td class="col-type" style="padding: 16px;">${typeBadge}</td>
+                <td class="col-actions" style="padding: 16px;">
                     ${actionButton}
                 </td>
             </tr>
@@ -1559,7 +1800,10 @@ function sendAppointmentReminder(appId) {
     const address = state.clinicSettings.clinic_address || 'el consultorio';
 
     const message = `Hola, ${patient.name}.\n\nTe recordamos tu ${typeLabel} programada para hoy a las ${app.start_time} en ${address}.\n\nPor favor, confírmanos tu asistencia. ¡Te esperamos!\n\nAtentamente,\n${docName}`;
-    const cleanPhone = patient.phone.replace(/[^0-9]/g, '');
+    let cleanPhone = patient.phone.replace(/[^0-9]/g, '');
+    if (cleanPhone.startsWith('0')) {
+        cleanPhone = '58' + cleanPhone.substring(1);
+    }
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
 }
@@ -2169,7 +2413,8 @@ function openPublicPatientRegistrationModal(linkData, doctorSocialLink) {
 
         const id = document.getElementById('pub-p-id').value;
         const name = document.getElementById('pub-p-name').value;
-        const phone = document.getElementById('pub-p-phone').value;
+        const phoneRaw = document.getElementById('pub-p-phone').value;
+        const phone = formatPhoneNumber(phoneRaw);
         const birth_date = document.getElementById('pub-p-birth').value;
 
         try {

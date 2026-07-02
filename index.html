@@ -358,15 +358,15 @@
 
             <!-- PAGINA 2: PACIENTES -->
             <section id="page-patients" class="page">
-                <div class="section-header">
+                <div class="section-header-inline" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; width: 100%;">
                     <h2>Listado de Pacientes</h2>
-                    <button class="btn-primary" onclick="openNewPatientModal()">
-                        <i data-lucide="user-plus"></i> Nuevo Paciente
+                    <button class="btn-primary" onclick="openNewPatientModal()" title="Nuevo Paciente" style="width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);">
+                        <i data-lucide="user-plus" style="width: 20px; height: 20px; color: white;"></i>
                     </button>
                 </div>
 
-                <div class="card" style="padding: 0; overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <div class="card" style="padding: 0; overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;" id="table-patients-list">
                         <thead>
                             <tr style="background-color: var(--bg-app); border-bottom: 1px solid var(--border-color);">
                                 <th style="padding: 16px;">ID / Cédula</th>
@@ -555,6 +555,38 @@
         </div>
     </div>
 
+    <!-- MODAL DE CITAS DEL DÍA SELECCIONADO (CALENDARIO) -->
+    <div class="modal-overlay" id="modal-day-appointments">
+        <div class="modal-content" style="max-width: 700px; width: 95%; height: 80vh; display: flex; flex-direction: column;">
+            <button class="modal-close" onclick="closeModal('modal-day-appointments')">×</button>
+            <h3 style="margin-bottom: 1rem; font-family: 'Outfit', sans-serif; flex-shrink: 0;" id="day-appointments-title">Citas del Día</h3>
+            
+            <div style="margin-bottom: 1rem; flex-shrink: 0; text-align: right;">
+                <button class="btn-primary" id="btn-add-appointment-from-day" style="padding: 8px 16px; width: 100%;">
+                    <i data-lucide="calendar-plus"></i> Agendar Cita
+                </button>
+            </div>
+            
+            <div style="flex-grow: 1; overflow-y: auto; padding-right: 4px;">
+                <div class="card" style="padding: 0; overflow: hidden; border: none; background: transparent;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;" id="table-day-appointments-events">
+                        <thead id="day-appointments-header">
+                            <tr style="background-color: var(--bg-app); border-bottom: 1px solid var(--border-color);">
+                                <th style="padding: 16px;">Hora</th>
+                                <th style="padding: 16px;">Paciente</th>
+                                <th style="padding: 16px;">Tipo</th>
+                                <th style="padding: 16px;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="day-appointments-list">
+                            <!-- Inyectado dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL 3: FICHA MÉDICA E HISTORIAL (LECTURA DE HISTORIAL COMPLETO) -->
     <div class="modal-overlay" id="modal-clinical-history">
         <div class="modal-content" style="max-width: 800px; width: 95%; height: 85vh; display: flex; flex-direction: column;">
@@ -562,16 +594,19 @@
             <h3 style="margin-bottom: 1rem; font-family: 'Outfit', sans-serif; flex-shrink: 0;" id="ch-patient-title">Historia Clínica - Armando</h3>
             
             <!-- Barra de Información General del Paciente -->
-            <div id="ch-patient-info-bar" style="background-color: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.2rem; display: flex; gap: 24px; font-size: 0.85rem; color: var(--text-secondary); flex-wrap: wrap; flex-shrink: 0; line-height: 1.4;">
-                <div><span style="font-weight:700; color:var(--text-primary);">Cédula/ID:</span> <span id="ch-p-id"></span></div>
-                <div><span style="font-weight:700; color:var(--text-primary);">Teléfono:</span> <span id="ch-p-phone"></span></div>
-                <div><span style="font-weight:700; color:var(--text-primary);">F. Nacimiento:</span> <span id="ch-p-birth"></span></div>
-                <div><span style="font-weight:700; color:var(--text-primary);">Próxima Cita/Cirugía:</span> <span id="ch-p-next-app"></span></div>
+            <div id="ch-patient-info-bar" class="ch-patient-info-bar">
+                <div class="info-item"><span class="info-key">Cédula/ID:</span> <span id="ch-p-id" class="info-val"></span></div>
+                <div class="info-item"><span class="info-key">Teléfono:</span> <span id="ch-p-phone" class="info-val"></span></div>
+                <div class="info-item"><span class="info-key">F. Nacimiento:</span> <span id="ch-p-birth" class="info-val"></span></div>
+                <div class="info-item"><span class="info-key">Próxima Cita/Cirugía:</span> <span id="ch-p-next-app" class="info-val"></span></div>
             </div>
             
             <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-shrink: 0;">
                 <button class="btn-primary" style="padding: 8px 16px; background: var(--color-accent);" onclick="openNewConsultationFromCurrent()">
                     <i data-lucide="plus"></i> Nueva Consulta
+                </button>
+                <button class="btn-primary" style="padding: 8px 16px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); display: inline-flex; align-items: center; gap: 6px;" onclick="openEditPatientModal(state.currentPatientId)">
+                    <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> Editar Datos
                 </button>
             </div>
 
