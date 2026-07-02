@@ -1512,7 +1512,6 @@ input:checked + .slider-switch:before {
     #switch-select-all-container {
         width: 100% !important;
         margin-bottom: 4px;
-        display: flex !important;
     }
     #btn-dashboard-trash {
         width: 100% !important;
