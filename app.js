@@ -2775,6 +2775,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Configurar timers de monitoreo
     setInterval(checkRealtimeNotifications, 15000);
+    
+    // Cerrar panel al hacer clic en el fondo traslúcido del wrapper
+    const wrapper = document.getElementById('notifications-wrapper');
+    if (wrapper) {
+        wrapper.addEventListener('click', (e) => {
+            if (e.target === wrapper) {
+                wrapper.style.display = 'none';
+            }
+        });
+    }
 });
 
 // Cerrar panel de notificaciones al hacer clic afuera
