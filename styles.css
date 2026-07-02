@@ -1012,6 +1012,10 @@ header.top-header {
 }
 
 /* Custom switch slider */
+#switch-select-all-container {
+    display: none;
+}
+
 .switch-container {
     position: relative;
     display: inline-flex;
