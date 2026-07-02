@@ -1548,5 +1548,16 @@ input:checked + .slider-switch:before {
     .btn-add-patient-responsive .btn-text {
         display: none !important;
     }
+
+    /* Adaptar el panel de notificaciones dropdown para móviles */
+    #notifications-panel {
+        position: fixed !important;
+        top: 60px !important;
+        right: 10px !important;
+        left: 10px !important;
+        width: calc(100% - 20px) !important;
+        max-height: 75vh !important;
+        z-index: 2500 !important;
+    }
 }
 
