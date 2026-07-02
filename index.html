@@ -252,14 +252,16 @@
 
         <!-- AREA DE CONTENIDO PRINCIPAL -->
         <main class="main-content">
-            <!-- Panel de Notificaciones Dropdown (Desktop derecha, Mobile centro absoluto, colocado aquí para evitar display: none de doctor-profile) -->
-            <div id="notifications-panel" class="card" style="display: none; position: fixed; top: 70px; right: 20px; width: 320px; max-height: 400px; z-index: 2000; padding: 1rem; overflow-y: auto; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); flex-direction: column; gap: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text-primary);">Notificaciones</h4>
-                    <button onclick="clearNotifications()" style="background: none; border: none; color: var(--color-primary); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Limpiar</button>
-                </div>
-                <div id="notifications-list" style="display: flex; flex-direction: column; gap: 8px;">
-                    <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem 0;">No tienes nuevas notificaciones.</div>
+            <!-- Wrapper para el Panel de Notificaciones Dropdown/Modal -->
+            <div id="notifications-wrapper" style="display: none;">
+                <div id="notifications-panel" class="card" style="position: fixed; top: 70px; right: 20px; width: 320px; max-height: 400px; z-index: 2000; padding: 1rem; overflow-y: auto; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 8px;">
+                        <h4 style="font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text-primary);">Notificaciones</h4>
+                        <button onclick="clearNotifications()" style="background: none; border: none; color: var(--color-primary); font-size: 0.75rem; font-weight: 600; cursor: pointer;">Limpiar</button>
+                    </div>
+                    <div id="notifications-list" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem 0;">No tienes nuevas notificaciones.</div>
+                    </div>
                 </div>
             </div>
 

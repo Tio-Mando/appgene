@@ -1016,6 +1016,15 @@ header.top-header {
     display: none;
 }
 
+#notifications-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    z-index: 2000;
+}
+
 .switch-container {
     position: relative;
     display: inline-flex;
@@ -1549,15 +1558,30 @@ input:checked + .slider-switch:before {
         display: none !important;
     }
 
-    /* Adaptar el panel de notificaciones dropdown para móviles */
-    #notifications-panel {
+    /* Adaptar el panel de notificaciones dropdown para móviles como un modal con fondo traslúcido */
+    #notifications-wrapper {
         position: fixed !important;
-        top: 60px !important;
-        right: 10px !important;
-        left: 10px !important;
-        width: calc(100% - 20px) !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background-color: rgba(0, 0, 0, 0.4) !important;
+        z-index: 2400 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    #notifications-panel {
+        position: relative !important;
+        top: 0 !important;
+        right: 0 !important;
+        left: 0 !important;
+        width: 90% !important;
+        max-width: 400px !important;
         max-height: 75vh !important;
         z-index: 2500 !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
     }
 }
 

@@ -2546,9 +2546,9 @@ function openPublicPatientRegistrationModal(linkData, doctorSocialLink) {
 // ==========================================================
 function toggleNotificationsPanel(event) {
     event.stopPropagation();
-    const panel = document.getElementById('notifications-panel');
-    if (panel) {
-        panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    const wrapper = document.getElementById('notifications-wrapper');
+    if (wrapper) {
+        wrapper.style.display = wrapper.style.display === 'none' ? 'flex' : 'none';
     }
 }
 
@@ -2779,9 +2779,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Cerrar panel de notificaciones al hacer clic afuera
 document.addEventListener('click', (e) => {
-    const panel = document.getElementById('notifications-panel');
-    if (panel && panel.style.display === 'flex' && !e.target.closest('#notifications-panel') && !e.target.closest('button[onclick="toggleNotificationsPanel(event)"]')) {
-        panel.style.display = 'none';
+    const wrapper = document.getElementById('notifications-wrapper');
+    if (wrapper && wrapper.style.display === 'flex' && !e.target.closest('#notifications-panel') && !e.target.closest('button[onclick="toggleNotificationsPanel(event)"]')) {
+        wrapper.style.display = 'none';
     }
 });
 
