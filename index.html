@@ -358,10 +358,11 @@
 
             <!-- PAGINA 2: PACIENTES -->
             <section id="page-patients" class="page">
-                <div class="section-header-inline" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; width: 100%;">
+                <div class="section-header-inline-patients">
                     <h2>Listado de Pacientes</h2>
-                    <button class="btn-primary" onclick="openNewPatientModal()" title="Nuevo Paciente" style="width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);">
-                        <i data-lucide="user-plus" style="width: 20px; height: 20px; color: white;"></i>
+                    <button class="btn-primary btn-add-patient-responsive" onclick="openNewPatientModal()">
+                        <i data-lucide="user-plus"></i>
+                        <span class="btn-text">Nuevo Paciente</span>
                     </button>
                 </div>
 
